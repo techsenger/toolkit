@@ -1,2 +1,2 @@
-# toolkit
-Techsenger Toolkit - A collection of useful tools and basic classes
+# Techsenger Toolkit
+A collection of useful tools and basic classes
