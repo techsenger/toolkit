@@ -12,7 +12,7 @@
     <version>1.0.0</version>
     <packaging>pom</packaging>
     <name>Toolkit</name>
-    <description>A collection of useful utility and basic classes.</description>
+    <description>A collection of useful utility and basic classes</description>
 
     <licenses>
         <license>
