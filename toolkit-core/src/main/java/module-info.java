@@ -25,7 +25,6 @@ module com.techsenger.toolkit.core {
     exports com.techsenger.toolkit.core.jpms;
     exports com.techsenger.toolkit.core.model;
     exports com.techsenger.toolkit.core.os;
-    exports com.techsenger.toolkit.core.project;
     exports com.techsenger.toolkit.core.ssl;
     exports com.techsenger.toolkit.core.version;
     exports com.techsenger.toolkit.core.xml;
