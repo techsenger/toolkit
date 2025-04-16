@@ -23,7 +23,6 @@ import java.io.IOException;
 import java.io.OutputStreamWriter;
 import java.io.Writer;
 import java.nio.charset.Charset;
-import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.attribute.PosixFilePermission;
@@ -56,12 +55,10 @@ public final class FileUtils {
      */
     public static void writeFile(final Path path, final String text, final Charset encoding) throws IOException {
         try (FileOutputStream fileOutputStream = new FileOutputStream(path.toFile());
-            OutputStreamWriter streamWriter = new OutputStreamWriter(fileOutputStream, StandardCharsets.UTF_8);
+            OutputStreamWriter streamWriter = new OutputStreamWriter(fileOutputStream, encoding);
             Writer writer = new BufferedWriter(streamWriter)) {
             writer.write(text);
             writer.flush();
-        } catch (IOException ex) {
-            throw ex;
         }
     }
 
