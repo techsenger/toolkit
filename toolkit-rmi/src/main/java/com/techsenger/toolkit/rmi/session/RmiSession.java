@@ -34,7 +34,7 @@ public interface RmiSession extends Remote {
      * @return uuid of the session.
      * @throws RemoteException if there is an RMI error.
      */
-    UUID getUuid()throws RemoteException;
+    UUID getUuid() throws RemoteException;
 
     /**
      * Returns service, It returns Remote because not real instance is sent to client but stub so we

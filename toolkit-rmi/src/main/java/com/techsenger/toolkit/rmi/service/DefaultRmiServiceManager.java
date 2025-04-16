@@ -159,7 +159,7 @@ public final class DefaultRmiServiceManager implements RmiServiceManager {
      * @throws Exception if there is an error.
      */
     private synchronized AbstractRmiStatelessService createStatelessService(
-            final Class<? extends AbstractRmiStatelessService> klass, final String interfaceName)throws Exception {
+            final Class<? extends AbstractRmiStatelessService> klass, final String interfaceName) throws Exception {
         //double check singleton pattern is used
         //there can be only one instance of stateless service
         AbstractRmiStatelessService service = statelessServicesByClass.get(klass);

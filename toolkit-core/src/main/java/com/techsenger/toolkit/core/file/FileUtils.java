@@ -42,7 +42,7 @@ public final class FileUtils {
      * @return string which is the data of file.
      * @throws IOException exception.
      */
-    public static String readFile(final Path path, final Charset encoding)throws IOException {
+    public static String readFile(final Path path, final Charset encoding) throws IOException {
         byte[] encoded = Files.readAllBytes(path);
         return new String(encoded, encoding);
     }
