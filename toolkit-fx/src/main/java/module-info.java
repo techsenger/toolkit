@@ -17,8 +17,9 @@
 module com.techsenger.toolkit.fx {
     requires org.slf4j;
     requires javafx.controls;
-    
+
     exports com.techsenger.toolkit.fx;
+    exports com.techsenger.toolkit.fx.collections;
     exports com.techsenger.toolkit.fx.color;
     exports com.techsenger.toolkit.fx.input;
     exports com.techsenger.toolkit.fx.table;
