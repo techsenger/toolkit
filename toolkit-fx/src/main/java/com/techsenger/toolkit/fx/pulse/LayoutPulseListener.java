@@ -14,16 +14,20 @@
  * limitations under the License.
  */
 
-module com.techsenger.toolkit.fx {
-    requires org.slf4j;
-    requires javafx.controls;
+package com.techsenger.toolkit.fx.pulse;
 
-    exports com.techsenger.toolkit.fx;
-    exports com.techsenger.toolkit.fx.collections;
-    exports com.techsenger.toolkit.fx.color;
-    exports com.techsenger.toolkit.fx.input;
-    exports com.techsenger.toolkit.fx.pulse;
-    exports com.techsenger.toolkit.fx.table;
-    exports com.techsenger.toolkit.fx.utils;
-    exports com.techsenger.toolkit.fx.value;
+/**
+ *
+ * @author Pavel Castornii
+ */
+@FunctionalInterface
+public interface LayoutPulseListener {
+
+    /**
+     * Executes an action before/after rendering.
+     *
+     * @return true if the listener should remain in the collection and be called on next pulse,
+     *         false if it should be removed after execution and not be called on next pulse.
+     */
+    boolean onLayoutPulse();
 }

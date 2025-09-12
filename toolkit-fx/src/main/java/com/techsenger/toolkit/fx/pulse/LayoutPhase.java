@@ -14,16 +14,15 @@
  * limitations under the License.
  */
 
-module com.techsenger.toolkit.fx {
-    requires org.slf4j;
-    requires javafx.controls;
+package com.techsenger.toolkit.fx.pulse;
 
-    exports com.techsenger.toolkit.fx;
-    exports com.techsenger.toolkit.fx.collections;
-    exports com.techsenger.toolkit.fx.color;
-    exports com.techsenger.toolkit.fx.input;
-    exports com.techsenger.toolkit.fx.pulse;
-    exports com.techsenger.toolkit.fx.table;
-    exports com.techsenger.toolkit.fx.utils;
-    exports com.techsenger.toolkit.fx.value;
+/**
+ *
+ * @author Pavel Castornii
+ */
+public enum LayoutPhase {
+
+    PRE,
+
+    POST
 }
