@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.techsenger.toolkit.fx.collections;
+package com.techsenger.toolkit.fx.binding;
 
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -33,7 +33,7 @@ import org.junit.jupiter.api.Test;
  *
  * @author Pavel Castornii
  */
-public class ListSynchronizerTest {
+public class ListBinderTest {
 
     private static class TestItem {
 
@@ -56,78 +56,78 @@ public class ListSynchronizerTest {
         }
     }
 
-    private ObservableList<Integer> source;
-    private ObservableList<String> target;
-    private ListSynchronizer<Integer, String> synchronizer;
+    private ListBinder<String, Integer> binder;
+    private ObservableList<String> targetList;
+    private ObservableList<Integer> sourceList;
     private List<Integer> addedItems;
     private List<Integer> removedItems;
 
     @BeforeEach
     void setUp() {
-        source = FXCollections.observableArrayList();
-        target = FXCollections.observableArrayList();
+        targetList = FXCollections.observableArrayList();
+        sourceList = FXCollections.observableArrayList();
         addedItems = new ArrayList<>();
         removedItems = new ArrayList<>();
-        synchronizer = new ListSynchronizer<>(source, target, Object::toString, addedItems::add, removedItems::add);
+        binder = ListBinder.bindContent(targetList, sourceList, Object::toString, addedItems::add, removedItems::add);
     }
 
     @AfterEach
     void tearDown() {
-        synchronizer.dispose();
+        binder.unbind();
     }
 
     @Test
     void initialSync_withAddedElements_shouldMirrorToSecondary() {
-        source.addAll(1, 2, 3);
+        sourceList.addAll(1, 2, 3);
 
-        assertThat(target).containsExactly("1", "2", "3");
+        assertThat(targetList).containsExactly("1", "2", "3");
         assertThat(addedItems).containsExactly(1, 2, 3);
     }
 
     @Test
     void addAtIndex_whenInsertingMiddleElement_shouldMaintainOrder() {
-        source.addAll(1, 3);
-        source.add(1, 2);
+        sourceList.addAll(1, 3);
+        sourceList.add(1, 2);
 
-        assertThat(target).containsExactly("1", "2", "3");
+        assertThat(targetList).containsExactly("1", "2", "3");
         assertThat(addedItems).containsExactly(1, 3, 2);
     }
 
     @Test
     void remove_whenMiddleElementRemoved_shouldUpdateSecondary() {
-        source.addAll(1, 2, 3);
-        source.remove(1);
+        sourceList.addAll(1, 2, 3);
+        sourceList.remove(1);
 
-        assertThat(target).containsExactly("1", "3");
+        assertThat(targetList).containsExactly("1", "3");
         assertThat(removedItems).containsExactly(2);
     }
 
     @Test
     void replace_whenElementReplaced_shouldUpdateSecondary() {
-        source.addAll(1, 2, 3);
-        source.set(1, 4);
+        sourceList.addAll(1, 2, 3);
+        sourceList.set(1, 4);
 
-        assertThat(target).containsExactly("1", "4", "3");
+        assertThat(targetList).containsExactly("1", "4", "3");
         assertThat(addedItems).containsExactly(1, 2, 3, 4);
         assertThat(removedItems).containsExactly(2);
     }
 
     @Test
     void permutation_whenListSorted_shouldMirrorOrder() {
-        source.addAll(3, 1, 2);
-        FXCollections.sort(source);
+        sourceList.addAll(3, 1, 2);
+        FXCollections.sort(sourceList);
 
-        assertThat(target).containsExactly("1", "2", "3");
+        assertThat(targetList).containsExactly("1", "2", "3");
         assertThat(addedItems).containsExactly(3, 1, 2);
         assertThat(removedItems).isEmpty();
     }
 
     @Test
     void permutation_whenListReversed_shouldMirrorOrder() {
-        source.addAll(1, 2, 3);
-        source.sort(Comparator.reverseOrder());
+        sourceList.addAll(1, 2, 3);
+        sourceList.sort(Comparator.reverseOrder());
 
-        assertThat(target).containsExactly("3", "2", "1");
+        assertThat(targetList).containsExactly("3", "2", "1");
         assertThat(addedItems).containsExactly(1, 2, 3);
         assertThat(removedItems).isEmpty();
     }
@@ -141,8 +141,8 @@ public class ListSynchronizerTest {
         List<TestItem> added = new ArrayList<>();
         List<TestItem> removed = new ArrayList<>();
 
-        ListSynchronizer<TestItem, String> itemSynchronizer = new ListSynchronizer<>(
-            sourceItems, targetItems,
+        ListBinder<String, TestItem> itemBinder = ListBinder.bindContent(
+            targetItems, sourceItems,
             item -> Integer.toString(item.getValue()),
             added::add,
             removed::add
@@ -158,30 +158,30 @@ public class ListSynchronizerTest {
         assertThat(added).containsExactly(item1, item2);
         assertThat(removed).isEmpty();
 
-        itemSynchronizer.dispose();
+        itemBinder.unbind();
     }
 
     @Test
     void multipleReplacements_shouldWorkCorrectly() {
-        source.addAll(1, 2, 3, 4);
-        source.set(0, 5);
-        source.set(2, 6);
-        source.set(3, 7);
+        sourceList.addAll(1, 2, 3, 4);
+        sourceList.set(0, 5);
+        sourceList.set(2, 6);
+        sourceList.set(3, 7);
 
-        assertThat(target).containsExactly("5", "2", "6", "7");
+        assertThat(targetList).containsExactly("5", "2", "6", "7");
         assertThat(addedItems).containsExactly(1, 2, 3, 4, 5, 6, 7);
         assertThat(removedItems).containsExactly(1, 3, 4);
     }
 
     @Test
     void complexOperations_combinationOfAllTypes() {
-        source.addAll(1, 2, 3);
-        source.remove(1);
-        source.add(4);
-        source.set(0, 5);
-        FXCollections.sort(source);
+        sourceList.addAll(1, 2, 3);
+        sourceList.remove(1);
+        sourceList.add(4);
+        sourceList.set(0, 5);
+        FXCollections.sort(sourceList);
 
-        assertThat(target).containsExactly("3", "4", "5");
+        assertThat(targetList).containsExactly("3", "4", "5");
         assertThat(addedItems).containsExactly(1, 2, 3, 4, 5);
         assertThat(removedItems).containsExactly(2, 1);
     }

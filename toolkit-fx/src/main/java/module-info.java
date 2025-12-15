@@ -19,7 +19,7 @@ module com.techsenger.toolkit.fx {
     requires javafx.controls;
 
     exports com.techsenger.toolkit.fx;
-    exports com.techsenger.toolkit.fx.collections;
+    exports com.techsenger.toolkit.fx.binding;
     exports com.techsenger.toolkit.fx.color;
     exports com.techsenger.toolkit.fx.input;
     exports com.techsenger.toolkit.fx.pulse;

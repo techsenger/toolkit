@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.techsenger.toolkit.fx.collections;
+package com.techsenger.toolkit.fx.binding;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -24,50 +24,65 @@ import javafx.collections.ListChangeListener;
 import javafx.collections.ObservableList;
 
 /**
- * A utility class that synchronizes two {@link ObservableList} instances in one direction.
- * <p>
- * The {@code sourceList} contains elements of type {@code S}.
- * The {@code targetList} contains corresponding elements of type {@code T},
- * which are derived from the source elements using the provided {@link Function} converter.
- * <p>
- * Whenever the {@code sourceList} changes (additions, removals, replacements, permutations, or updates),
- * the {@code targetList} is automatically updated to reflect these changes.
- * Synchronization is one-way only — modifications to the {@code targetList} do not affect the {@code sourceList}.
- * <p>
- * It’s important to note that the JavaFX API does not define when permutation changes should occur. For example,
- * {@code FXCollections.reverse(list)} performs a reordering using two types of changes — added and removed. On the
- * other hand, {@code List.sort(Comparator.reverseOrder())} produces permutation changes.
- * <p>
- * To stop synchronization, call {@link #dispose()}.
+ * Binds the content of two {@link ObservableList}s by keeping one list synchronized with another using a mapping
+ * function.
  *
- * @param <T> the type of elements in the source list
- * @param <S> the type of elements in the target list
+ * @param <T> the element type of the target list
+ * @param <S> the element type of the source list
  *
  * @author Pavel Castornii
  */
-public class ListSynchronizer<T, S> {
+public final class ListBinder<T, S> {
 
-    private final ObservableList<T> sourceList;
-
-    private final ObservableList<S> targetList;
-
-    private final Function<T, S> converter;
-
-    private final ListChangeListener<T> listener;
-
-    private final Consumer<T> onAdded;
-
-    private final Consumer<T> onRemoved;
-
-    public ListSynchronizer(ObservableList<T> sourceList, ObservableList<S> targetList, Function<T, S> converter) {
-        this(sourceList, targetList, converter, null, null);
+    /**
+     * Creates a binder that keeps {@code targetList} synchronized with {@code sourceList} by mapping elements of
+     * {@code sourceList} to {@code targetList}.
+     *
+     * @param targetList the target list to be synchronized
+     * @param sourceList the source list to synchronize from
+     * @param mapper maps elements of {@code sourceList} to elements of {@code targetList}
+     *
+     * @return a {@code ListBinder} that keeps the lists synchronized
+     */
+    public static <T, S> ListBinder<T, S> bindContent(ObservableList<T> targetList, ObservableList<S> sourceList,
+            Function<S, T> mapper) {
+        return new ListBinder<>(targetList, sourceList, mapper, null, null);
     }
 
-    public ListSynchronizer(ObservableList<T> sourceList, ObservableList<S> targetList, Function<T, S> converter,
-                          Consumer<T> onAdded, Consumer<T> onRemoved) {
-        this.sourceList = sourceList;
+    /**
+     * Creates a binder that keeps {@code targetList} synchronized with {@code sourceList} and invokes callbacks when
+     * elements are added or removed.
+     *
+     * @param targetList the target list to be synchronized
+     * @param sourceList the source list to synchronize from
+     * @param mapper maps elements of {@code sourceList} to elements of {@code targetList}
+     * @param onAdded callback invoked when an element is added to {@code sourceList}
+     * @param onRemoved callback invoked when an element is removed from {@code sourceList}
+     *
+     * @return a {@code ListBinder} that keeps the lists synchronized
+     */
+    public static <T, S> ListBinder<T, S> bindContent(ObservableList<T> targetList, ObservableList<S> sourceList,
+            Function<S, T> mapper, Consumer<S> onAdded, Consumer<S> onRemoved) {
+        return new ListBinder<>(targetList, sourceList, mapper, onAdded, onRemoved);
+    }
+
+    private final ObservableList<T> targetList;
+
+    private final ObservableList<S> sourceList;
+
+    private final Function<S, T> mapper;
+
+    private final ListChangeListener<S> listener;
+
+    private final Consumer<S> onAdded;
+
+    private final Consumer<S> onRemoved;
+
+    private ListBinder(ObservableList<T> targetList, ObservableList<S> sourceList, Function<S, T> mapper,
+                          Consumer<S> onAdded, Consumer<S> onRemoved) {
         this.targetList = targetList;
-        this.converter = converter;
+        this.sourceList = sourceList;
+        this.mapper = mapper;
         this.onAdded = onAdded;
         this.onRemoved = onRemoved;
         synchronizeAll();
@@ -75,40 +90,16 @@ public class ListSynchronizer<T, S> {
         sourceList.addListener(listener);
     }
 
-    public ObservableList<T> getSourceList() {
-        return sourceList;
-    }
-
-    public ObservableList<S> getTargetList() {
-        return targetList;
-    }
-
-    public Function<T, S> getConverter() {
-        return converter;
-    }
-
-    public Consumer<T> getOnAdded() {
-        return onAdded;
-    }
-
-    public Consumer<T> getOnRemoved() {
-        return onRemoved;
-    }
-
-    /**
-     * Stops list synchronization. After calling this method, changes in sourceList will no longer be reflected
-     * in targetList.
-     */
-    public void dispose() {
+    public void unbind() {
         sourceList.removeListener(listener);
     }
 
     private void synchronizeAll() {
         targetList.clear();
-        sourceList.forEach(item -> targetList.add(converter.apply(item)));
+        sourceList.forEach(item -> targetList.add(mapper.apply(item)));
     }
 
-    private void handleChanges(ListChangeListener.Change<? extends T> change) {
+    private void handleChanges(ListChangeListener.Change<? extends S> change) {
         // | Operation  | wasAdded | wasRemoved | wasReplaced | wasPermutated | wasUpdated |
         // | ---------- | -------- | ---------- | ----------- | ------------- | ---------- |
         // | Replaced   | +        | +          | +           | -             | -          |
@@ -134,18 +125,18 @@ public class ListSynchronizer<T, S> {
         }
     }
 
-    private void handleAdditions(ListChangeListener.Change<? extends T> change) {
+    private void handleAdditions(ListChangeListener.Change<? extends S> change) {
         int startIndex = change.getFrom();
         for (int i = 0; i < change.getAddedSize(); i++) {
-            T addedItem = change.getList().get(startIndex + i);
+            S addedItem = change.getList().get(startIndex + i);
             if (this.onAdded != null) {
                 this.onAdded.accept(addedItem);
             }
-            targetList.add(startIndex + i, converter.apply(addedItem));
+            targetList.add(startIndex + i, mapper.apply(addedItem));
         }
     }
 
-    private void handleRemovals(ListChangeListener.Change<? extends T> change) {
+    private void handleRemovals(ListChangeListener.Change<? extends S> change) {
         targetList.subList(change.getFrom(), change.getFrom() + change.getRemovedSize()).clear();
         if (this.onRemoved != null) {
             for (var item : change.getRemoved()) {
@@ -154,7 +145,7 @@ public class ListSynchronizer<T, S> {
         }
     }
 
-    private void handleReplacements(ListChangeListener.Change<? extends T> change) {
+    private void handleReplacements(ListChangeListener.Change<? extends S> change) {
         if (this.onRemoved != null && change.wasRemoved()) {
             for (var item : change.getRemoved()) {
                 this.onRemoved.accept(item);
@@ -166,22 +157,22 @@ public class ListSynchronizer<T, S> {
             }
         }
         for (int i = change.getFrom(); i < change.getTo(); i++) {
-            T newItem = change.getList().get(i);
-            targetList.set(i, converter.apply(newItem));
+            S newItem = change.getList().get(i);
+            targetList.set(i, mapper.apply(newItem));
         }
     }
 
-    private void handlePermutations(ListChangeListener.Change<? extends T> change) {
-        List<S> tempCopy = new ArrayList<>(targetList);
+    private void handlePermutations(ListChangeListener.Change<? extends S> change) {
+        List<T> tempCopy = new ArrayList<>(targetList);
         for (int oldIndex = change.getFrom(); oldIndex < change.getTo(); oldIndex++) {
             int newIndex = change.getPermutation(oldIndex);
             targetList.set(newIndex, tempCopy.get(oldIndex));
         }
     }
 
-    private void handleUpdates(ListChangeListener.Change<? extends T> change) {
+    private void handleUpdates(ListChangeListener.Change<? extends S> change) {
         for (int i = change.getFrom(); i < change.getTo(); i++) {
-            targetList.set(i, converter.apply(change.getList().get(i)));
+            targetList.set(i, mapper.apply(change.getList().get(i)));
         }
     }
 }
