@@ -17,9 +17,12 @@
 package com.techsenger.toolkit.fx.utils;
 
 import java.util.ArrayList;
+import java.util.Objects;
 import javafx.application.Platform;
 import javafx.scene.Node;
 import javafx.scene.Parent;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  *
@@ -27,28 +30,36 @@ import javafx.scene.Parent;
  */
 public final class NodeUtils {
 
+    private static final Logger logger = LoggerFactory.getLogger(NodeUtils.class);
+
+    public static final int MAX_FOCUS_ATTEMPTS = 10;
+
+    /**
+     * Requests focus on the given JavaFX node. If focus is not immediately acquired, retries up to
+     * {@link #MAX_FOCUS_ATTEMPTS} times. This method runs asynchronously on the JavaFX application thread.
+     *
+     * @param node the JavaFX node to receive focus
+     */
     public static void requestFocus(Node node) {
-        Platform.runLater(() -> {
-            if (!node.isFocused()) {
-                node.requestFocus();
-                requestFocus(node);
-            }
-        });
+        requestFocusWithCounter(node, null, 0);
     }
 
+    /**
+     * Requests focus on the given JavaFX node and executes a callback upon success. If focus is not immediately
+     * acquired, retries up to {@link #MAX_FOCUS_ATTEMPTS} times. The callback is only executed when focus is
+     * successfully acquired. This method runs asynchronously on the JavaFX application thread.
+     *
+     * @param node the JavaFX node to receive focus
+     * @param onSuccess callback to execute when focus is acquired
+     */
     public static void requestFocus(Node node, Runnable onSuccess) {
-        Platform.runLater(() -> {
-            if (!node.isFocused()) {
-                node.requestFocus();
-                requestFocus(node, onSuccess);
-            } else {
-                onSuccess.run();
-            }
-        });
+        Objects.requireNonNull(onSuccess);
+        requestFocusWithCounter(node, onSuccess, 0);
     }
 
     /**
      * Returns all child nodes of some node. It seems that this method finds only visible nodes.
+     *
      * @param parent node.
      * @return list of nodes.
      */
@@ -58,8 +69,26 @@ public final class NodeUtils {
         return nodes;
     }
 
+    private static void requestFocusWithCounter(Node node, Runnable onSuccess, int attempt) {
+        if (attempt >= MAX_FOCUS_ATTEMPTS) {
+            logger.debug("Couldn't request focus for {}", node.getClass());
+            return;
+        }
+        Platform.runLater(() -> {
+            if (!node.isFocused()) {
+                node.requestFocus();
+                requestFocusWithCounter(node, onSuccess, attempt + 1);
+            } else {
+                if (onSuccess != null) {
+                    onSuccess.run();
+                }
+            }
+        });
+    }
+
     /**
      * Return all descendent/children of some node.
+     *
      * @param parent that will be searched for children.
      * @param nodes that are used for storing found children.
      */
