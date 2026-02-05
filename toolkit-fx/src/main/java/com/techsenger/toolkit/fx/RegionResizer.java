@@ -42,6 +42,8 @@ public class RegionResizer extends AbstractResizer {
 
     private final EventHandler<MouseEvent> mousedReleasedHandler = (event) -> mouseReleased(event);
 
+    private boolean validateSize = true;
+
     public RegionResizer(DoubleProperty minWidth, DoubleProperty minHeight,
             DoubleProperty maxWidth, DoubleProperty maxHeight, EventHandler<? super MouseEvent> startedHandler,
             EventHandler<? super MouseEvent> finishedHandler) {
@@ -74,6 +76,14 @@ public class RegionResizer extends AbstractResizer {
         this.region = null;
     }
 
+    public boolean isValidateSize() {
+        return validateSize;
+    }
+
+    public void setValidateSize(boolean validateSize) {
+        this.validateSize = validateSize;
+    }
+
     @Override
     protected double getWidth() {
         return this.region.getWidth();
@@ -81,8 +91,18 @@ public class RegionResizer extends AbstractResizer {
 
     @Override
     protected void setWidth(double width) {
-        region.setMaxWidth(width);
-        region.setMinWidth(width);
+        var valid = true;
+        if (this.validateSize && !isWidthValid(width)) {
+            valid = false;
+        }
+        if (valid) {
+            region.setMaxWidth(width);
+            region.setMinWidth(width);
+        }
+    }
+
+    protected boolean isWidthValid(double width) {
+        return width >= this.region.prefWidth(-1);
     }
 
     @Override
@@ -92,8 +112,18 @@ public class RegionResizer extends AbstractResizer {
 
     @Override
     protected void setHeight(double height) {
-        region.setMaxHeight(height);
-        region.setMinHeight(height);
+        var valid = true;
+        if (this.validateSize && !isHeightValid(height)) {
+            valid = false;
+        }
+        if (valid) {
+            region.setMaxHeight(height);
+            region.setMinHeight(height);
+        }
+    }
+
+    protected boolean isHeightValid(double height) {
+        return height >= this.region.prefHeight(-1);
     }
 
     @Override
