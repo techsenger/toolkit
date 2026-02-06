@@ -16,62 +16,85 @@
 
 package com.techsenger.toolkit.fx.utils;
 
+import java.util.Comparator;
 import java.util.List;
 import javafx.scene.control.ButtonBase;
 
 /**
  * Class contains utilities for working with buttons.
+ *
  * @author Pavel Castornii
  */
 public final class ButtonUtils {
 
     /**
-     * Adjusts the width of all buttons to match the widest button's width based on their text content. This method
-     * does not require buttons to have their actual sizes computed beforehand.
+     * Makes all buttons equal width by binding their width to the button with the longest text.
+     * <p>
+     * The method finds the button with the maximum text length and binds all other buttons' min/max width properties to
+     * its actual width property. The widest button remains unbound and determines the final width for all buttons.
+     * <p>
+     * Note: Width calculation is based on text length (character count), not rendered text width. This works well for
+     * uniform fonts but may not be pixel-perfect for proportional fonts.
      *
-     * @param buttons
+     * @param buttons list of buttons to make equal width; if null or empty, no action is taken
+     * @param resetPrevious if true, unbinds any existing width property bindings before applying new ones
      */
-    public static void makeEqualWidthByText(ButtonBase... buttons) {
-        //find button with max text length
-        ButtonBase b = buttons[0];
-        for (var button : buttons) {
-            if (button.getText().length() > b.getText().length()) {
-                b = button;
-            }
-        }
-        for (var button : buttons) {
-            if (button != b) {
-                button.minWidthProperty().bind(b.widthProperty());
-                button.maxWidthProperty().bind(b.widthProperty());
+    public static void makeEqualWidthByText(List<? extends ButtonBase> buttons, boolean resetPrevious) {
+        ButtonBase maxWidthButton = buttons.stream()
+                .max(Comparator.comparingInt(b -> b.getText().length()))
+                .orElse(null);
+        if (maxWidthButton != null) {
+            for (var button : buttons) {
+                if (resetPrevious) {
+                    button.minWidthProperty().unbind();
+                    button.maxWidthProperty().unbind();
+                }
+                if (button != maxWidthButton) {
+                    button.minWidthProperty().bind(maxWidthButton.widthProperty());
+                    button.maxWidthProperty().bind(maxWidthButton.widthProperty());
+                }
             }
         }
     }
 
     /**
-     * Adjusts the width of all buttons to match the widest button's width based on their size. This method requires
-     * buttons to have their actual sizes computed beforehand.
+     * Makes all buttons equal width by binding their width to the button with the largest actual rendered width.
+     * <p>
+     * The method finds the button with the maximum current width and binds all other buttons' min/max width properties
+     * to its width property. The widest button remains unbound and determines the final width for all buttons.
+     * <p>
+     * Important: This method requires buttons to be already laid out and rendered. Call {@code applyCss()} and
+     * {@code layout()} on buttons before using this method, or ensure they are part of a visible scene graph.
      *
-     * @param buttons
+     * @param buttons list of buttons to make equal width; if null or empty, no action is taken
+     * @param resetPrevious if true, unbinds any existing width property bindings before applying new ones
      */
-    public static void makeEqualWidthBySize(ButtonBase... buttons) {
-        //find button with max text length
-        ButtonBase b = buttons[0];
-        for (var button : buttons) {
-            if (button.getWidth() > b.getWidth()) {
-                b = button;
-            }
-        }
-        for (var button : buttons) {
-            if (button != b) {
-                button.minWidthProperty().bind(b.widthProperty());
-                button.maxWidthProperty().bind(b.widthProperty());
+    public static void makeEqualWidthBySize(List<? extends ButtonBase> buttons, boolean resetPrevious) {
+        ButtonBase maxWidthButton = buttons.stream()
+                .max(Comparator.comparingDouble(b -> b.getWidth()))
+                .orElse(null);
+        if (maxWidthButton != null) {
+            for (var button : buttons) {
+                if (resetPrevious) {
+                    button.minWidthProperty().unbind();
+                    button.maxWidthProperty().unbind();
+                }
+                if (button != maxWidthButton) {
+                    button.minWidthProperty().bind(maxWidthButton.widthProperty());
+                    button.maxWidthProperty().bind(maxWidthButton.widthProperty());
+                }
             }
         }
     }
 
     /**
-     * Makes square buttons by binding button width to button height.
-     * @param buttons
+     * Makes buttons square by binding their width to match their height.
+     * <p>
+     * Binds min, max, and preferred width properties to the height property for each button. This ensures buttons
+     * maintain a square aspect ratio as their height changes. The preferred width binding is necessary because JavaFX
+     * layout calculations may use the preferred size to determine the final dimensions.
+     *
+     * @param buttons buttons to make square; if empty, no action is taken
      */
     public static void makeSquareByHeight(ButtonBase... buttons) {
         for (var button : buttons) {
@@ -83,8 +106,13 @@ public final class ButtonUtils {
     }
 
     /**
-     * Makes square buttons by binding button width to button height.
-     * @param buttons
+     * Makes buttons square by binding their width to match their height.
+     * <p>
+     * Binds min, max, and preferred width properties to the height property for each button. This ensures buttons
+     * maintain a square aspect ratio as their height changes. The preferred width binding is necessary because JavaFX
+     * layout calculations may use the preferred size to determine the final dimensions.
+     *
+     * @param buttons buttons to make square; if empty, no action is taken
      */
     public static void makeSquareByHeight(List<ButtonBase> buttons) {
         makeSquareByHeight(buttons.toArray(new ButtonBase[buttons.size()]));
