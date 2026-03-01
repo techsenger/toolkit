@@ -71,7 +71,7 @@ public final class NodeUtils {
 
     private static void requestFocusWithCounter(Node node, Runnable onSuccess, int attempt) {
         if (attempt >= MAX_FOCUS_ATTEMPTS) {
-            logger.debug("Couldn't request focus for {}", node.getClass());
+            logger.debug("Couldn't request focus for {}", node);
             return;
         }
         Platform.runLater(() -> {
