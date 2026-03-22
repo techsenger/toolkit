@@ -78,5 +78,6 @@
         <module>toolkit-fx</module>
         <module>toolkit-jpa</module>
         <module>toolkit-rmi</module>
+        <module>toolkit-http</module>
     </modules>
 </project>
