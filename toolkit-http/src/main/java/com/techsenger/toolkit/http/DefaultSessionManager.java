@@ -19,7 +19,6 @@ package com.techsenger.toolkit.http;
 import com.techsenger.toolkit.http.security.SecurityContext;
 import com.techsenger.toolkit.http.session.Session;
 import com.techsenger.toolkit.http.session.SessionManager;
-import com.techsenger.toolkit.http.session.SessionStatus;
 import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
@@ -78,7 +77,6 @@ class DefaultSessionManager implements SessionManager {
         HttpSession session = new HttpSession(uuid);
         session.setRemoteHost(remoteHost);
         session.setRemotePort(remotePort);
-        session.setStatus(SessionStatus.OPEN);
         var now = LocalDateTime.now();
         session.setOpenedAt(now);
         long epochSeconds = now.atZone(ZoneId.systemDefault()).toInstant().getEpochSecond();

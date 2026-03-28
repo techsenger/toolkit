@@ -53,12 +53,9 @@ public interface Session {
     int getRemotePort();
 
     /**
-     * Returns the current status of this session.
-     *
-     * @return the session status, never {@code null}
-     * @see SessionStatus
+     * Returns whether this session is closed.
      */
-    SessionStatus getStatus();
+    boolean isClosed();
 
     /**
      * Returns the date and time when this session was opened.

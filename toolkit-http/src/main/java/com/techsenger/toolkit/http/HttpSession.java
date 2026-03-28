@@ -18,7 +18,6 @@ package com.techsenger.toolkit.http;
 
 import com.techsenger.toolkit.http.security.SecurityContext;
 import com.techsenger.toolkit.http.session.Session;
-import com.techsenger.toolkit.http.session.SessionStatus;
 import java.time.Instant;
 import java.time.LocalDateTime;
 import org.slf4j.Logger;
@@ -35,8 +34,6 @@ class HttpSession implements Session {
     private String remoteHost;
 
     private int remotePort;
-
-    private SessionStatus status;
 
     private String uuid;
 
@@ -72,12 +69,8 @@ class HttpSession implements Session {
     }
 
     @Override
-    public SessionStatus getStatus() {
-        return status;
-    }
-
-    public void setStatus(SessionStatus status) {
-        this.status = status;
+    public boolean isClosed() {
+        return this.closedAt != null;
     }
 
     @Override
@@ -129,7 +122,6 @@ class HttpSession implements Session {
     }
 
     public void close() throws Exception {
-        setStatus(SessionStatus.CLOSED);
         setClosedAt(LocalDateTime.now());
         if (this.securityContext != null) {
             this.securityContext.close();
