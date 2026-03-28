@@ -26,6 +26,29 @@ import java.util.regex.Pattern;
  */
 public class Version implements Serializable {
 
+    public static Version parse(String full) {
+        var str = full.trim();
+        Integer major = null;
+        Integer minor = null;
+        Integer patch = null;
+        boolean snapshot = false;
+        if (str.endsWith("-SNAPSHOT") || str.toLowerCase().endsWith("-snapshot")) {
+            str = str.substring(0, str.length() - "-SNAPSHOT".length());
+            snapshot = true;
+        }
+        var versions = str.split(Pattern.quote("."));
+        if (versions.length >= 1) {
+            major = Integer.parseInt(versions[0]);
+        }
+        if (versions.length >= 2) {
+            minor = Integer.parseInt(versions[1]);
+        }
+        if (versions.length == 3) {
+            patch = Integer.parseInt(versions[2]);
+        }
+        return new Version(major, minor, patch, snapshot);
+    }
+
     private Integer major;
 
     private Integer minor;
@@ -56,25 +79,6 @@ public class Version implements Serializable {
                 sb.append("-SNAPSHOT");
             }
             this.full = sb.toString();
-        }
-    }
-
-    public Version(final String full) {
-        var str = full.trim();
-        this.full = str;
-        if (str.endsWith("-SNAPSHOT") || str.toLowerCase().endsWith("-snapshot")) {
-            str = str.substring(0, str.length() - "-SNAPSHOT".length());
-            this.snapshot = true;
-        }
-        var versions = str.split(Pattern.quote("."));
-        if (versions.length >= 1) {
-            this.major = Integer.parseInt(versions[0]);
-        }
-        if (versions.length >= 2) {
-            this.minor = Integer.parseInt(versions[1]);
-        }
-        if (versions.length == 3) {
-            this.patch = Integer.parseInt(versions[2]);
         }
     }
 
