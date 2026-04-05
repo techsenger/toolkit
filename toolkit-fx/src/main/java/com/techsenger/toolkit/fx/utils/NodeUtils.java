@@ -18,9 +18,11 @@ package com.techsenger.toolkit.fx.utils;
 
 import java.util.ArrayList;
 import java.util.Objects;
-import javafx.application.Platform;
+import javafx.animation.KeyFrame;
+import javafx.animation.Timeline;
 import javafx.scene.Node;
 import javafx.scene.Parent;
+import javafx.util.Duration;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -41,7 +43,7 @@ public final class NodeUtils {
      * @param node the JavaFX node to receive focus
      */
     public static void requestFocus(Node node) {
-        requestFocusWithCounter(node, null, 0);
+        doRequestFocus(node, null, MAX_FOCUS_ATTEMPTS);
     }
 
     /**
@@ -54,7 +56,32 @@ public final class NodeUtils {
      */
     public static void requestFocus(Node node, Runnable onSuccess) {
         Objects.requireNonNull(onSuccess);
-        requestFocusWithCounter(node, onSuccess, 0);
+        doRequestFocus(node, onSuccess, MAX_FOCUS_ATTEMPTS);
+    }
+
+    /**
+     * Requests focus on the given JavaFX node. If focus is not immediately acquired, retries up to
+     * {@code maxAttempts} times. This method runs asynchronously on the JavaFX application thread.
+     *
+     * @param node the JavaFX node to receive focus
+     * @param maxAttempts the maximum number of attempts to acquire focus
+     */
+    public static void requestFocus(Node node, int maxAttempts) {
+        doRequestFocus(node, null, maxAttempts);
+    }
+
+    /**
+     * Requests focus on the given JavaFX node and executes a callback upon success. If focus is not immediately
+     * acquired, retries up to {@code maxAttempts} times. The callback is only executed when focus is
+     * successfully acquired. This method runs asynchronously on the JavaFX application thread.
+     *
+     * @param node the JavaFX node to receive focus
+     * @param onSuccess callback to execute when focus is acquired
+     * @param maxAttempts the maximum number of attempts to acquire focus
+     */
+    public static void requestFocus(Node node, Runnable onSuccess, int maxAttempts) {
+        Objects.requireNonNull(onSuccess);
+        doRequestFocus(node, onSuccess, maxAttempts);
     }
 
     /**
@@ -69,21 +96,27 @@ public final class NodeUtils {
         return nodes;
     }
 
-    private static void requestFocusWithCounter(Node node, Runnable onSuccess, int attempt) {
-        if (attempt >= MAX_FOCUS_ATTEMPTS) {
-            logger.debug("Couldn't request focus for {}", node);
-            return;
-        }
-        Platform.runLater(() -> {
-            if (!node.isFocused()) {
-                node.requestFocus();
-                requestFocusWithCounter(node, onSuccess, attempt + 1);
-            } else {
-                if (onSuccess != null) {
-                    onSuccess.run();
+    private static void doRequestFocus(Node node, Runnable onSuccess, int maxAttempts) {
+        Timeline[] holder = new Timeline[1];
+        holder[0] = new Timeline(
+            new KeyFrame(Duration.millis(25), e -> {
+                if (!node.isFocused()) {
+                    node.requestFocus();
+                } else {
+                    holder[0].stop();
+                    if (onSuccess != null) {
+                        onSuccess.run();
+                    }
                 }
+            })
+        );
+        holder[0].setCycleCount(maxAttempts);
+        holder[0].setOnFinished(e -> {
+            if (!node.isFocused()) {
+                logger.debug("Couldn't request focus for {}, after {} attempts", node, maxAttempts);
             }
         });
+        holder[0].play();
     }
 
     /**
