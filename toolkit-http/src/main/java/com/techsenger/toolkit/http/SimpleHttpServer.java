@@ -91,8 +91,8 @@ public class SimpleHttpServer implements Server {
         if (this.server == null) {
             throw new IllegalStateException("Server is not running");
         } else {
-            this.server.stop(0);
             var address = this.server.getAddress();
+            this.server.stop(0);
             this.server = null;
             sessionManager.stopCleanup();
             sessionManager.closeAllSessions();
