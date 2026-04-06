@@ -16,31 +16,31 @@
 
 package com.techsenger.toolkit.fx.utils;
 
-import javafx.scene.control.ListView;
+import javafx.scene.control.TreeView;
 import javafx.scene.control.skin.VirtualFlow;
 
 /**
  *
  * @author Pavel Castornii
  */
-public final class ListViewUtils {
+public final class TreeViewUtils {
 
     /**
-     * Scrolls the list view only when the given index is outside the fully visible range, mimicking natural keyboard
-     * navigation behavior.
+     * Scrolls the tree view only when the given index is outside the fully visible range, mimicking natural keyboard
+     * navigation behavior. Partially visible cells are not considered visible.
      *
-     * @param listView the list view to scroll
+     * @param treeView the tree view to scroll
      * @param index    the index that should be visible
      */
-    public static void scrollToIfNeeded(ListView<?> listView, int index) {
-        VirtualFlow<?> flow = (VirtualFlow<?>) listView.lookup(".virtual-flow");
+    public static void scrollToIfNeeded(TreeView<?> treeView, int index) {
+        VirtualFlow<?> flow = (VirtualFlow<?>) treeView.lookup(".virtual-flow");
         if (flow == null) {
             return;
         }
-        NodeUtils.scrollToIfNeeded(flow, listView::scrollTo, index);
+        NodeUtils.scrollToIfNeeded(flow, treeView::scrollTo, index);
     }
 
-    private ListViewUtils() {
+    private TreeViewUtils() {
         // empty
     }
 }

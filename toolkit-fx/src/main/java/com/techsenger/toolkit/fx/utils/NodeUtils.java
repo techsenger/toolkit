@@ -18,10 +18,12 @@ package com.techsenger.toolkit.fx.utils;
 
 import java.util.ArrayList;
 import java.util.Objects;
+import java.util.function.IntConsumer;
 import javafx.animation.KeyFrame;
 import javafx.animation.Timeline;
 import javafx.scene.Node;
 import javafx.scene.Parent;
+import javafx.scene.control.skin.VirtualFlow;
 import javafx.util.Duration;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -94,6 +96,39 @@ public final class NodeUtils {
         ArrayList<Node> nodes = new ArrayList<Node>();
         addAllChildren(parent, nodes);
         return nodes;
+    }
+
+    /**
+     * Scrolls the control only when the given index is outside the fully visible range,
+     * mimicking natural keyboard navigation behavior. A partially visible cell at the
+     * bottom is not considered visible.
+     *
+     * @param flow   the virtual flow of the control
+     * @param scroll the scroll action to perform
+     * @param index  the index that should be visible
+     */
+    static void scrollToIfNeeded(VirtualFlow<?> flow, IntConsumer scroll, int index) {
+        var firstCell = flow.getFirstVisibleCell();
+        var lastCell = flow.getLastVisibleCell();
+        if (firstCell == null || lastCell == null) {
+            return;
+        }
+        int first = firstCell.getIndex();
+        int last = lastCell.getBoundsInParent().getMaxY() > flow.getHeight()
+                ? lastCell.getIndex() - 1
+                : lastCell.getIndex();
+        int visibleCount = last - first;
+        if (index <= first) {
+            scroll.accept(index);
+        } else if (index > last) {
+            if (index - last > 1) {
+                // Jump - scroll so that index is the last visible item
+                scroll.accept(index - visibleCount);
+            } else {
+                // Single step down - shift by one
+                scroll.accept(first + 1);
+            }
+        }
     }
 
     private static void doRequestFocus(Node node, Runnable onSuccess, int maxAttempts) {
