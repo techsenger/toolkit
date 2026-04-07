@@ -132,10 +132,20 @@ public final class NodeUtils {
     }
 
     private static void doRequestFocus(Node node, Runnable onSuccess, int maxAttempts) {
+        int[] attempt = {0};
         Timeline[] holder = new Timeline[1];
         holder[0] = new Timeline(
             new KeyFrame(Duration.millis(25), e -> {
+                var scene = node.getScene();
+                if (scene == null) {
+                    holder[0].stop();
+                    return;
+                }
                 if (!node.isFocused()) {
+                    if (attempt[0] > 0) {
+                        logger.debug("Couldn't request focus for {}, after {} attempts; focus owner: {}",
+                                node, maxAttempts, scene.getFocusOwner());
+                    }
                     node.requestFocus();
                 } else {
                     holder[0].stop();
@@ -143,6 +153,7 @@ public final class NodeUtils {
                         onSuccess.run();
                     }
                 }
+                attempt[0]++;
             })
         );
         holder[0].setCycleCount(maxAttempts);
