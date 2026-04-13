@@ -26,13 +26,13 @@ import java.util.regex.Pattern;
  */
 public class Version implements Serializable {
 
-    public static Version parse(String full) {
+    public static Version of(String full) {
         var str = full.trim();
         Integer major = null;
         Integer minor = null;
         Integer patch = null;
         boolean snapshot = false;
-        if (str.endsWith("-SNAPSHOT") || str.toLowerCase().endsWith("-snapshot")) {
+        if (str.toLowerCase().endsWith("-snapshot")) {
             str = str.substring(0, str.length() - "-SNAPSHOT".length());
             snapshot = true;
         }
