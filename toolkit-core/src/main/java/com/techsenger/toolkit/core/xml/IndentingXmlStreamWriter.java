@@ -109,19 +109,16 @@ public class IndentingXmlStreamWriter implements XMLStreamWriter, AutoCloseable 
     @Override
     public void writeStartDocument() throws XMLStreamException {
         delegate.writeStartDocument();
-        delegate.writeCharacters("\n");
     }
 
     @Override
     public void writeStartDocument(String version) throws XMLStreamException {
         delegate.writeStartDocument(version);
-        delegate.writeCharacters("\n");
     }
 
     @Override
     public void writeStartDocument(String encoding, String version) throws XMLStreamException {
         delegate.writeStartDocument(encoding, version);
-        delegate.writeCharacters("\n");
     }
 
     @Override
@@ -162,6 +159,20 @@ public class IndentingXmlStreamWriter implements XMLStreamWriter, AutoCloseable 
 
     @Override
     public void writeComment(String data) throws XMLStreamException {
+        delegate.writeComment(data);
+    }
+
+    /**
+     * Writes an XML comment on a new line with proper indentation.
+     *
+     * <p>Unlike {@link #writeComment(String)}, this method prepends a newline and indentation before the comment,
+     * making it suitable for block-level comments such as file headers or section separators.
+     *
+     * @param data the comment text, without {@code <!--} and {@code -->} delimiters
+     * @throws XMLStreamException if an error occurs writing to the underlying stream
+     */
+    public void writeBlockComment(String data) throws XMLStreamException {
+        writeIndent();
         delegate.writeComment(data);
     }
 
