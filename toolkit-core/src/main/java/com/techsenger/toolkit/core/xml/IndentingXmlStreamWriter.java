@@ -109,16 +109,19 @@ public class IndentingXmlStreamWriter implements XMLStreamWriter, AutoCloseable 
     @Override
     public void writeStartDocument() throws XMLStreamException {
         delegate.writeStartDocument();
+        delegate.writeCharacters("\n");
     }
 
     @Override
     public void writeStartDocument(String version) throws XMLStreamException {
         delegate.writeStartDocument(version);
+        delegate.writeCharacters("\n");
     }
 
     @Override
     public void writeStartDocument(String encoding, String version) throws XMLStreamException {
         delegate.writeStartDocument(encoding, version);
+        delegate.writeCharacters("\n");
     }
 
     @Override
