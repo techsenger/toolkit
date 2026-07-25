@@ -16,10 +16,10 @@
 
 package com.techsenger.toolkit.fx.utils;
 
+import com.techsenger.toolkit.fx.utils.VirtualFlowUtils.ScrollPosition;
 import javafx.scene.control.TableView;
 import javafx.scene.control.TreeItem;
 import javafx.scene.control.TreeTableView;
-import javafx.scene.control.skin.VirtualFlow;
 
 /**
  *
@@ -28,50 +28,82 @@ import javafx.scene.control.skin.VirtualFlow;
 public final class TableUtils {
 
     /**
-     * Scrolls the table view only when the given index is outside the visible range, mimicking natural keyboard
-     * navigation behavior.
+     * Returns whether the given index is currently, fully visible in the table view's viewport. Safe to call
+     * right after a structural change to the table (such as replacing items), not only on an already-stable
+     * view — see {@link VirtualFlowUtils#isFullyVisible}.
      *
-     * <p><b>Important:</b> This method relies on {@link VirtualFlow} being fully initialized and its cells being
-     * rendered. It must not be called immediately after structural changes to the table (such as replacing items
-     * or any operation that triggers a layout pass), as {@code VirtualFlow} may not yet have rebuilt its visible
-     * cells, causing the scroll to have no effect. This method is intended for navigation-driven scrolling only
-     * (e.g., keyboard or programmatic selection on an already stable view). Wrapping the call in
-     * {@code Platform.runLater} — or even nested calls — is not a reliable workaround; if the view may have
-     * just been updated, prefer a direct {@link TableView#scrollTo(int)} call instead.
-     *
-     *
-     * @param tableView the table view to scroll
-     * @param index     the index that should be visible
+     * @param tableView the table view to check
+     * @param index     the index to check
+     * @return {@code true} if the index is fully visible, {@code false} otherwise
      */
-    public static void scrollToIfNeeded(TableView<?> tableView, int index) {
-        VirtualFlow<?> flow = (VirtualFlow<?>) tableView.lookup(".virtual-flow");
-        if (flow == null) {
-            return;
-        }
-        NodeUtils.scrollToIfNeeded(flow, tableView::scrollTo, index);
+    public static boolean isFullyVisible(TableView<?> tableView, int index) {
+        return VirtualFlowUtils.isFullyVisible(tableView, index, true);
     }
 
     /**
-     * Scrolls the tree table view only when the given index is outside the visible range, mimicking natural keyboard
-     * navigation behavior.
+     * Returns whether the given index is currently, fully visible in the tree table view's viewport. Safe to
+     * call right after a structural change to the tree (such as expanding nodes or replacing items), not only
+     * on an already-stable view — see {@link VirtualFlowUtils#isFullyVisible}.
      *
-     * <p><b>Important:</b> This method relies on {@link VirtualFlow} being fully initialized and its cells being
-     * rendered. It must not be called immediately after structural changes to the tree (such as expanding nodes,
-     * replacing items, or any operation that triggers a layout pass), as {@code VirtualFlow} may not yet have
-     * rebuilt its visible cells, causing the scroll to be silently skipped. This method is intended for
-     * navigation-driven scrolling only (e.g., keyboard or programmatic selection on an already stable view).
-     * Wrapping the call in {@code Platform.runLater} — or even nested calls — is not a reliable workaround;
-     * if the view may have just been updated, prefer a direct {@link TreeTableView#scrollTo(int)} call instead.
+     * @param treeTableView the tree table view to check
+     * @param index         the index to check
+     * @return {@code true} if the index is fully visible, {@code false} otherwise
+     */
+    public static boolean isFullyVisible(TreeTableView<?> treeTableView, int index) {
+        return VirtualFlowUtils.isFullyVisible(treeTableView, index, true);
+    }
+
+    /**
+     * Scrolls the table view so the given index lands at {@code position} within the viewport, regardless of
+     * whether it is already visible. Safe to call right after a structural change to the table (such as
+     * replacing items), not only on an already-stable view — see {@link VirtualFlowUtils#scrollTo}.
+     *
+     * @param tableView the table view to scroll
+     * @param index     the index to scroll to
+     * @param position  where the index should end up in the viewport
+     */
+    public static void scrollTo(TableView<?> tableView, int index, ScrollPosition position) {
+        VirtualFlowUtils.scrollTo(tableView, index, position, true);
+    }
+
+    /**
+     * Scrolls the tree table view so the given index lands at {@code position} within the viewport, regardless
+     * of whether it is already visible. Safe to call right after a structural change to the tree (such as
+     * expanding nodes or replacing items), not only on an already-stable view — see
+     * {@link VirtualFlowUtils#scrollTo}.
+     *
+     * @param treeTableView the tree table view to scroll
+     * @param index         the index to scroll to
+     * @param position      where the index should end up in the viewport
+     */
+    public static void scrollTo(TreeTableView<?> treeTableView, int index, ScrollPosition position) {
+        VirtualFlowUtils.scrollTo(treeTableView, index, position, true);
+    }
+
+    /**
+     * Scrolls the table view only when the given index is outside the visible range. Safe to call right after
+     * a structural change to the table (such as replacing items), not only on an already-stable view — see
+     * {@link VirtualFlowUtils#scrollToIfNeeded}.
+     *
+     * @param tableView the table view to scroll
+     * @param index     the index that should be visible
+     * @param position  where the index should end up in the viewport if it needs to be scrolled to
+     */
+    public static void scrollToIfNeeded(TableView<?> tableView, int index, ScrollPosition position) {
+        VirtualFlowUtils.scrollToIfNeeded(tableView, index, position, true);
+    }
+
+    /**
+     * Scrolls the tree table view only when the given index is outside the visible range. Safe to call right
+     * after a structural change to the tree (such as expanding nodes or replacing items), not only on an
+     * already-stable view — see {@link VirtualFlowUtils#scrollToIfNeeded}.
      *
      * @param treeTableView the tree table view to scroll
      * @param index         the index that should be visible
+     * @param position      where the index should end up in the viewport if it needs to be scrolled to
      */
-    public static void scrollToIfNeeded(TreeTableView<?> treeTableView, int index) {
-        VirtualFlow<?> flow = (VirtualFlow<?>) treeTableView.lookup(".virtual-flow");
-        if (flow == null) {
-            return;
-        }
-        NodeUtils.scrollToIfNeeded(flow, treeTableView::scrollTo, index);
+    public static void scrollToIfNeeded(TreeTableView<?> treeTableView, int index, ScrollPosition position) {
+        VirtualFlowUtils.scrollToIfNeeded(treeTableView, index, position, true);
     }
 
     /**

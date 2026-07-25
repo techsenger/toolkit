@@ -16,8 +16,8 @@
 
 package com.techsenger.toolkit.fx.utils;
 
+import com.techsenger.toolkit.fx.utils.VirtualFlowUtils.ScrollPosition;
 import javafx.scene.control.ListView;
-import javafx.scene.control.skin.VirtualFlow;
 
 /**
  *
@@ -26,18 +26,42 @@ import javafx.scene.control.skin.VirtualFlow;
 public final class ListViewUtils {
 
     /**
-     * Scrolls the list view only when the given index is outside the fully visible range, mimicking natural keyboard
-     * navigation behavior.
+     * Returns whether the given index is currently, fully visible in the list view's viewport. Safe to call
+     * right after a structural change to the list (such as replacing items), not only on an already-stable
+     * view — see {@link VirtualFlowUtils#isFullyVisible}.
+     *
+     * @param listView the list view to check
+     * @param index    the index to check
+     * @return {@code true} if the index is fully visible, {@code false} otherwise
+     */
+    public static boolean isFullyVisible(ListView<?> listView, int index) {
+        return VirtualFlowUtils.isFullyVisible(listView, index, true);
+    }
+
+    /**
+     * Scrolls the list view so the given index lands at {@code position} within the viewport, regardless of
+     * whether it is already visible. Safe to call right after a structural change to the list (such as
+     * replacing items), not only on an already-stable view — see {@link VirtualFlowUtils#scrollTo}.
+     *
+     * @param listView the list view to scroll
+     * @param index    the index to scroll to
+     * @param position where the index should end up in the viewport
+     */
+    public static void scrollTo(ListView<?> listView, int index, ScrollPosition position) {
+        VirtualFlowUtils.scrollTo(listView, index, position, true);
+    }
+
+    /**
+     * Scrolls the list view only when the given index is outside the fully visible range. Safe to call right
+     * after a structural change to the list (such as replacing items), not only on an already-stable view —
+     * see {@link VirtualFlowUtils#scrollToIfNeeded}.
      *
      * @param listView the list view to scroll
      * @param index    the index that should be visible
+     * @param position where the index should end up in the viewport if it needs to be scrolled to
      */
-    public static void scrollToIfNeeded(ListView<?> listView, int index) {
-        VirtualFlow<?> flow = (VirtualFlow<?>) listView.lookup(".virtual-flow");
-        if (flow == null) {
-            return;
-        }
-        NodeUtils.scrollToIfNeeded(flow, listView::scrollTo, index);
+    public static void scrollToIfNeeded(ListView<?> listView, int index, ScrollPosition position) {
+        VirtualFlowUtils.scrollToIfNeeded(listView, index, position, true);
     }
 
     private ListViewUtils() {

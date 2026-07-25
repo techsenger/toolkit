@@ -16,9 +16,9 @@
 
 package com.techsenger.toolkit.fx.utils;
 
+import com.techsenger.toolkit.fx.utils.VirtualFlowUtils.ScrollPosition;
 import javafx.scene.control.TreeItem;
 import javafx.scene.control.TreeView;
-import javafx.scene.control.skin.VirtualFlow;
 
 /**
  *
@@ -27,26 +27,47 @@ import javafx.scene.control.skin.VirtualFlow;
 public final class TreeViewUtils {
 
     /**
-     * Scrolls the tree view only when the given index is outside the fully visible range, mimicking natural keyboard
-     * navigation behavior. Partially visible cells are not considered visible.
+     * Returns whether the given index is currently, fully visible in the tree view's viewport. Partially
+     * visible cells are not considered visible.
      *
-     * <p><b>Important:</b> This method relies on {@link VirtualFlow} being fully initialized and its cells being
-     * rendered. It must not be called immediately after structural changes to the tree (such as expanding nodes,
-     * replacing items, or any operation that triggers a layout pass), as {@code VirtualFlow} may not yet have
-     * rebuilt its visible cells, causing the scroll to have no effect. This method is intended for
-     * navigation-driven scrolling only (e.g., keyboard or programmatic selection on an already stable view).
-     * Wrapping the call in {@code Platform.runLater} — or even nested calls — is not a reliable workaround;
-     * if the view may have just been updated, prefer a direct {@link TreeView#scrollTo(int)} call instead.
+     * <p>Safe to call right after a structural change to the tree (such as expanding nodes or replacing
+     * items), not only on an already-stable view — see {@link VirtualFlowUtils#isFullyVisible}.
+     *
+     * @param treeView the tree view to check
+     * @param index    the index to check
+     * @return {@code true} if the index is fully visible, {@code false} otherwise
+     */
+    public static boolean isFullyVisible(TreeView<?> treeView, int index) {
+        return VirtualFlowUtils.isFullyVisible(treeView, index, true);
+    }
+
+    /**
+     * Scrolls the tree view so the given index lands at {@code position} within the viewport, regardless of
+     * whether it is already visible. Safe to call right after a structural change to the tree (such as
+     * expanding nodes or replacing items), not only on an already-stable view — see
+     * {@link VirtualFlowUtils#scrollTo}.
+     *
+     * @param treeView the tree view to scroll
+     * @param index    the index to scroll to
+     * @param position where the index should end up in the viewport
+     */
+    public static void scrollTo(TreeView<?> treeView, int index, ScrollPosition position) {
+        VirtualFlowUtils.scrollTo(treeView, index, position, true);
+    }
+
+    /**
+     * Scrolls the tree view only when the given index is outside the fully visible range. Partially visible
+     * cells are not considered visible.
+     *
+     * <p>Safe to call right after a structural change to the tree (such as expanding nodes or replacing items),
+     * not only on an already-stable view — see {@link VirtualFlowUtils#scrollToIfNeeded}.
      *
      * @param treeView the tree view to scroll
      * @param index    the index that should be visible
+     * @param position where the index should end up in the viewport if it needs to be scrolled to
      */
-    public static void scrollToIfNeeded(TreeView<?> treeView, int index) {
-        VirtualFlow<?> flow = (VirtualFlow<?>) treeView.lookup(".virtual-flow");
-        if (flow == null) {
-            return;
-        }
-        NodeUtils.scrollToIfNeeded(flow, treeView::scrollTo, index);
+    public static void scrollToIfNeeded(TreeView<?> treeView, int index, ScrollPosition position) {
+        VirtualFlowUtils.scrollToIfNeeded(treeView, index, position, true);
     }
 
     /**

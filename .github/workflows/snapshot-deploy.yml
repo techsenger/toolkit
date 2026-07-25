@@ -31,13 +31,19 @@ jobs:
             </servers>
           </settings>
           EOF
+    - name: Install Xvfb
+      run: sudo apt-get update && sudo apt-get install -y xvfb
     - name: Deploy only snapshot versions
       run: |
         VERSION=$(mvn help:evaluate -Dexpression=project.version -q -DforceStdout)
         echo "Detected version: $VERSION"
         if [[ $VERSION == *"SNAPSHOT"* ]]; then
           echo "Deploying snapshot version: $VERSION"
-          mvn deploy -U -B
+          # toolkit-fx's VirtualFlow UI tests need a real (if virtual) display: TableView/ListView/TreeView
+          # only get real, non-zero row heights once part of an actually shown Stage/Scene, and mvn deploy
+          # runs the default profile's tests (Surefire) before publishing. xvfb-run gives the JavaFX toolkit
+          # a working display without a real monitor.
+          xvfb-run -a mvn deploy -U -B
         else
           echo "Skipping deploy for release version: $VERSION"
         fi

@@ -15,8 +15,9 @@
  */
 
 open module com.techsenger.toolkit.fx {
+    requires org.slf4j;
+    requires javafx.controls;
+
     requires org.junit.jupiter.api;
     requires org.assertj.core;
-
-    requires javafx.controls;
 }
