@@ -17,7 +17,6 @@
 package com.techsenger.toolkit.fx.utils;
 
 import com.techsenger.toolkit.fx.FxPlatform;
-import com.techsenger.toolkit.fx.utils.VirtualFlowUtils.ScrollPosition;
 import java.util.function.Supplier;
 import javafx.scene.Scene;
 import javafx.scene.control.TreeItem;
@@ -166,10 +165,10 @@ class TreeViewUtilsTest {
     // scrollTo
 
     @Test
-    void scrollTo_positionTop_targetBecomesFirstVisibleRow() throws InterruptedException {
+    void scrollTo_positionStart_targetBecomesFirstVisibleRow() throws InterruptedException {
         var result = onFxThread(() -> {
             var treeView = newTreeView(100, 200, 300);
-            TreeViewUtils.scrollTo(treeView, 50, ScrollPosition.TOP);
+            TreeViewUtils.scrollTo(treeView, 50, ScrollPosition.START);
             return new Pair<>(firstVisibleIndex(treeView), TreeViewUtils.isFullyVisible(treeView, 50));
         });
 
@@ -178,10 +177,10 @@ class TreeViewUtilsTest {
     }
 
     @Test
-    void scrollTo_positionBottom_targetBecomesLastFullyVisibleRow() throws InterruptedException {
+    void scrollTo_positionEnd_targetBecomesLastFullyVisibleRow() throws InterruptedException {
         var result = onFxThread(() -> {
             var treeView = newTreeView(100, 200, 300);
-            TreeViewUtils.scrollTo(treeView, 50, ScrollPosition.BOTTOM);
+            TreeViewUtils.scrollTo(treeView, 50, ScrollPosition.END);
             return new Pair<>(TreeViewUtils.isFullyVisible(treeView, 50), TreeViewUtils.isFullyVisible(treeView, 51));
         });
 
@@ -220,7 +219,7 @@ class TreeViewUtilsTest {
     void scrollToIfNeeded_indexNotVisible_scrollsToRequestedPosition() throws InterruptedException {
         var first = onFxThread(() -> {
             var treeView = newTreeView(100, 200, 300);
-            TreeViewUtils.scrollToIfNeeded(treeView, 60, ScrollPosition.TOP);
+            TreeViewUtils.scrollToIfNeeded(treeView, 60, ScrollPosition.START);
             return firstVisibleIndex(treeView);
         });
 

@@ -16,7 +16,6 @@
 
 package com.techsenger.toolkit.fx.utils;
 
-import com.techsenger.toolkit.fx.utils.VirtualFlowUtils.ScrollPosition;
 import javafx.scene.control.TableView;
 import javafx.scene.control.TreeItem;
 import javafx.scene.control.TreeTableView;

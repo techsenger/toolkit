@@ -17,7 +17,6 @@
 package com.techsenger.toolkit.fx.utils;
 
 import com.techsenger.toolkit.fx.FxPlatform;
-import com.techsenger.toolkit.fx.utils.VirtualFlowUtils.ScrollPosition;
 import java.util.function.Supplier;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
@@ -180,10 +179,10 @@ class ListViewUtilsTest {
     // scrollTo
 
     @Test
-    void scrollTo_positionTop_targetBecomesFirstVisibleRow() throws InterruptedException {
+    void scrollTo_positionStart_targetBecomesFirstVisibleRow() throws InterruptedException {
         var result = onFxThread(() -> {
             var listView = newListView(100, 200, 300);
-            ListViewUtils.scrollTo(listView, 50, ScrollPosition.TOP);
+            ListViewUtils.scrollTo(listView, 50, ScrollPosition.START);
             return new Pair<>(firstVisibleIndex(listView), ListViewUtils.isFullyVisible(listView, 50));
         });
 
@@ -192,10 +191,10 @@ class ListViewUtilsTest {
     }
 
     @Test
-    void scrollTo_positionBottom_targetBecomesLastFullyVisibleRow() throws InterruptedException {
+    void scrollTo_positionEnd_targetBecomesLastFullyVisibleRow() throws InterruptedException {
         var result = onFxThread(() -> {
             var listView = newListView(100, 200, 300);
-            ListViewUtils.scrollTo(listView, 50, ScrollPosition.BOTTOM);
+            ListViewUtils.scrollTo(listView, 50, ScrollPosition.END);
             return new Pair<>(ListViewUtils.isFullyVisible(listView, 50), ListViewUtils.isFullyVisible(listView, 51));
         });
 
@@ -246,7 +245,7 @@ class ListViewUtilsTest {
     void scrollTo_allItemsAlreadyFitViewport_leavesNothingToScroll() throws InterruptedException {
         var result = onFxThread(() -> {
             var listView = newListView(3, 200, 300);
-            ListViewUtils.scrollTo(listView, 2, ScrollPosition.BOTTOM);
+            ListViewUtils.scrollTo(listView, 2, ScrollPosition.END);
             return new Pair<>(ListViewUtils.isFullyVisible(listView, 0), ListViewUtils.isFullyVisible(listView, 2));
         });
 
@@ -259,7 +258,7 @@ class ListViewUtilsTest {
         var first = onFxThread(() -> {
             var listView = newListView(3, 200, 300);
             listView.setItems(bigItemList(200));
-            ListViewUtils.scrollTo(listView, 150, ScrollPosition.TOP);
+            ListViewUtils.scrollTo(listView, 150, ScrollPosition.START);
             return firstVisibleIndex(listView);
         });
 
@@ -288,7 +287,7 @@ class ListViewUtilsTest {
             // 60, not close to 100: with ~14 rows fitting in a 300px viewport, an index too close to the end
             // of a 100-item list could not become the literal first visible row without leaving blank space
             // past the list end, so it would legitimately get clamped — this test isn't about clamping.
-            ListViewUtils.scrollToIfNeeded(listView, 60, ScrollPosition.TOP);
+            ListViewUtils.scrollToIfNeeded(listView, 60, ScrollPosition.START);
             return firstVisibleIndex(listView);
         });
 

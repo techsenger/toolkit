@@ -17,7 +17,6 @@
 package com.techsenger.toolkit.fx.utils;
 
 import com.techsenger.toolkit.fx.FxPlatform;
-import com.techsenger.toolkit.fx.utils.VirtualFlowUtils.ScrollPosition;
 import java.util.function.Supplier;
 import javafx.beans.property.ReadOnlyStringWrapper;
 import javafx.collections.FXCollections;
@@ -206,10 +205,10 @@ class TableUtilsTest {
     // TableView: scrollTo
 
     @Test
-    void scrollTo_tableView_positionTop_targetBecomesFirstVisibleRow() throws InterruptedException {
+    void scrollTo_tableView_positionStart_targetBecomesFirstVisibleRow() throws InterruptedException {
         var result = onFxThread(() -> {
             var tableView = newTableView(100, 200, 300);
-            TableUtils.scrollTo(tableView, 50, ScrollPosition.TOP);
+            TableUtils.scrollTo(tableView, 50, ScrollPosition.START);
             return new Pair<>(firstVisibleIndex(tableView), TableUtils.isFullyVisible(tableView, 50));
         });
 
@@ -218,10 +217,10 @@ class TableUtilsTest {
     }
 
     @Test
-    void scrollTo_tableView_positionBottom_targetBecomesLastFullyVisibleRow() throws InterruptedException {
+    void scrollTo_tableView_positionEnd_targetBecomesLastFullyVisibleRow() throws InterruptedException {
         var result = onFxThread(() -> {
             var tableView = newTableView(100, 200, 300);
-            TableUtils.scrollTo(tableView, 50, ScrollPosition.BOTTOM);
+            TableUtils.scrollTo(tableView, 50, ScrollPosition.END);
             return new Pair<>(TableUtils.isFullyVisible(tableView, 50), TableUtils.isFullyVisible(tableView, 51));
         });
 
@@ -307,10 +306,10 @@ class TableUtilsTest {
     // TreeTableView: scrollTo
 
     @Test
-    void scrollTo_treeTableView_positionTop_targetBecomesFirstVisibleRow() throws InterruptedException {
+    void scrollTo_treeTableView_positionStart_targetBecomesFirstVisibleRow() throws InterruptedException {
         var result = onFxThread(() -> {
             var treeTableView = newTreeTableView(100, 200, 300);
-            TableUtils.scrollTo(treeTableView, 50, ScrollPosition.TOP);
+            TableUtils.scrollTo(treeTableView, 50, ScrollPosition.START);
             return new Pair<>(firstVisibleIndex(treeTableView), TableUtils.isFullyVisible(treeTableView, 50));
         });
 
@@ -319,10 +318,10 @@ class TableUtilsTest {
     }
 
     @Test
-    void scrollTo_treeTableView_positionBottom_targetBecomesLastFullyVisibleRow() throws InterruptedException {
+    void scrollTo_treeTableView_positionEnd_targetBecomesLastFullyVisibleRow() throws InterruptedException {
         var result = onFxThread(() -> {
             var treeTableView = newTreeTableView(100, 200, 300);
-            TableUtils.scrollTo(treeTableView, 50, ScrollPosition.BOTTOM);
+            TableUtils.scrollTo(treeTableView, 50, ScrollPosition.END);
             return new Pair<>(
                     TableUtils.isFullyVisible(treeTableView, 50), TableUtils.isFullyVisible(treeTableView, 51));
         });

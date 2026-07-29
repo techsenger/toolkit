@@ -22,7 +22,8 @@ import javafx.scene.layout.Region;
 
 /**
  * Utilities for querying and controlling the scroll position of a {@code VirtualFlow}-backed control
- * ({@code TableView}, {@code ListView}, {@code TreeView}, {@code TreeTableView}).
+ * ({@code TableView}, {@code ListView}, {@code TreeView}, {@code TreeTableView}, or a custom control whose
+ * {@code VirtualFlow} happens to scroll horizontally instead of vertically &mdash; see {@link #visibleRange}).
  *
  * <p>Every method here takes the control itself (as a {@link Region}), not the {@code VirtualFlow} directly —
  * the flow is looked up via {@code owner.lookup(".virtual-flow")} internally, and the same {@code owner} is
@@ -34,12 +35,9 @@ import javafx.scene.layout.Region;
  */
 public final class VirtualFlowUtils {
 
-    /**
-     * Where a target row should end up within the viewport after {@link #scrollTo}/{@link #scrollToIfNeeded}.
-     */
-    public enum ScrollPosition {
-        TOP, CENTER, BOTTOM
-    }
+
+
+    private static final int MAX_CONVERGENCE_ATTEMPTS = 8;
 
     private static final class VisibleRange {
         private final int first;
@@ -106,13 +104,18 @@ public final class VirtualFlowUtils {
         flow.scrollTo(index);
         owner.applyCss();
         owner.layout();
-        // How many rows fit fully is not a fixed constant: with non-integer row heights, it can differ by one
-        // depending on exactly which pixel offset the viewport starts at, which itself depends on the scroll
-        // position. So target is recomputed from a fresh visibleRange() on every iteration instead of once
-        // upfront, and each iteration's move is re-verified rather than assumed correct — this converges in a
-        // couple of iterations since the index-to-position mapping is close to linear, and simply stops moving
-        // once a computed target agrees with what is actually realized.
-        for (int attempt = 0; attempt < 5; attempt++) {
+        // How many cells fit fully is not a fixed constant: with non-integer row/column sizes, it can differ
+        // by one depending on exactly which pixel offset the viewport starts at, which itself depends on the
+        // scroll position just applied. So target is recomputed from a fresh visibleRange() on every
+        // iteration instead of once upfront. Convergence requires two things to both hold, not just one:
+        // the freshly computed target must match what was computed last iteration (the formula itself has
+        // stabilized, not just coincidentally matched a transient viewportCount reading), AND the flow must
+        // already be sitting at that target (not just about to be told to move there). Checking only
+        // "range.first == target" against a single reading is not enough — viewportCount can still shift on
+        // the very next layout pass even when this iteration's numbers happen to agree, silently leaving the
+        // flow one cell short of the intended edge.
+        var previousTarget = -1;
+        for (int attempt = 0; attempt < MAX_CONVERGENCE_ATTEMPTS; attempt++) {
             var range = visibleRange(flow);
             if (range == null) {
                 return;
@@ -122,30 +125,19 @@ public final class VirtualFlowUtils {
                 return; // everything fits, nothing to scroll
             }
             var maxTarget = itemCount - viewportCount;
-            int target;
-            switch (position) {
-                case TOP:
-                    target = index;
-                    break;
-                case BOTTOM:
-                    target = index - viewportCount + 1;
-                    break;
-                case CENTER:
-                    target = ViewPortScrollingHelper.calculateScrolledElementIndex(viewportCount, itemCount, index);
-                    break;
-                default:
-                    throw new IllegalStateException("Unexpected position: " + position);
-            }
-            target = clamp(target, 0, maxTarget);
-            if (range.first == target) {
+            var target = clamp(computeTarget(position, index, viewportCount, itemCount), 0, maxTarget);
+            if (target == previousTarget && range.first == target) {
                 return;
             }
-            flow.setPosition(target / (double) maxTarget);
-            // setPosition only marks the flow dirty; without forcing this pass now, the next iteration's
-            // visibleRange() read (or the caller's, once this method returns) would still see the pre-move
-            // state until the next layout pulse.
-            owner.applyCss();
-            owner.layout();
+            if (range.first != target) {
+                flow.setPosition(target / (double) maxTarget);
+                // setPosition only marks the flow dirty; without forcing this pass now, the next iteration's
+                // visibleRange() read (or the caller's, once this method returns) would still see the
+                // pre-move state until the next layout pulse.
+                owner.applyCss();
+                owner.layout();
+            }
+            previousTarget = target;
         }
     }
 
@@ -179,9 +171,23 @@ public final class VirtualFlowUtils {
         return (VirtualFlow<?>) owner.lookup(".virtual-flow");
     }
 
+    private static int computeTarget(ScrollPosition position, int index, int viewportCount, int itemCount) {
+        switch (position) {
+            case START:
+                return index;
+            case END:
+                return index - viewportCount + 1;
+            case CENTER:
+                return ViewPortScrollingHelper.calculateScrolledElementIndex(viewportCount, itemCount, index);
+            default:
+                throw new IllegalStateException("Unexpected position: " + position);
+        }
+    }
+
     /**
-     * Returns the range of currently, fully visible rows, or {@code null} if {@code flow} has no realized
-     * cells (e.g. never laid out) or fewer than one row is fully visible (viewport shorter than a single row).
+     * Returns the range of currently, fully visible cells, or {@code null} if {@code flow} has no realized
+     * cells (e.g. never laid out) or fewer than one cell is fully visible (viewport shorter than a single
+     * cell).
      */
     private static VisibleRange visibleRange(VirtualFlow<?> flow) {
         var firstCell = flow.getFirstVisibleCell();
@@ -190,9 +196,15 @@ public final class VirtualFlowUtils {
             return null;
         }
         var first = firstCell.getIndex();
-        // A cell whose bottom edge falls past the viewport is only partially visible, so it is excluded.
-        var last = lastCell.getBoundsInParent().getMaxY() > flow.getHeight() ? lastCell.getIndex() - 1
-                : lastCell.getIndex();
+        var bounds = lastCell.getBoundsInParent();
+        // A cell whose trailing edge falls past the viewport is only partially visible, so it is excluded.
+        // Which edge is "trailing" depends on the flow's orientation: a vertical flow (e.g. TableView,
+        // ListView) scrolls top-to-bottom, so it's the cell's bottom (Y); a horizontal flow (e.g. a custom
+        // control whose cells are themselves whole columns) scrolls left-to-right, so it's the right edge (X).
+        var lastFullyVisible = flow.isVertical()
+                ? bounds.getMaxY() <= flow.getHeight()
+                : bounds.getMaxX() <= flow.getWidth();
+        var last = lastFullyVisible ? lastCell.getIndex() : lastCell.getIndex() - 1;
         return last < first ? null : new VisibleRange(first, last);
     }
 

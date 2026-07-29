@@ -16,7 +16,6 @@
 
 package com.techsenger.toolkit.fx.utils;
 
-import com.techsenger.toolkit.fx.utils.VirtualFlowUtils.ScrollPosition;
 import javafx.scene.control.ListView;
 
 /**
