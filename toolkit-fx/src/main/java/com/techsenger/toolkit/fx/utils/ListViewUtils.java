@@ -63,6 +63,31 @@ public final class ListViewUtils {
         VirtualFlowUtils.scrollToIfNeeded(listView, index, position, true);
     }
 
+    /**
+     * Forces the cell currently showing {@code itemIndex} to re-derive its visual content from its current
+     * item, without touching the list's items/scroll position/selection — see
+     * {@link VirtualFlowUtils#updateCell}. A list view's cells are its items one-to-one, so {@code itemIndex}
+     * is exactly the cell index.
+     *
+     * @param listView  the list view to update
+     * @param itemIndex the item index whose cell should be updated
+     */
+    public static void updateCell(ListView<?> listView, int itemIndex) {
+        VirtualFlowUtils.updateCell(listView, itemIndex);
+    }
+
+    /**
+     * Forces every cell of the list view to re-derive its visual content from its current item, without
+     * touching the list's items/scroll position/selection — see {@link VirtualFlowUtils#updateCells}. A
+     * list view's cells are its items one-to-one, so passing {@code false} touches every item.
+     *
+     * @param listView    the list view to update
+     * @param onlyVisible whether to touch only the currently visible cells (cheap) or every cell (thorough)
+     */
+    public static void updateCells(ListView<?> listView, boolean onlyVisible) {
+        VirtualFlowUtils.updateCells(listView, onlyVisible);
+    }
+
     private ListViewUtils() {
         // empty
     }

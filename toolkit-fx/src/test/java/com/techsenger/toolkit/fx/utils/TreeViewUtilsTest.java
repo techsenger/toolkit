@@ -19,6 +19,7 @@ package com.techsenger.toolkit.fx.utils;
 import com.techsenger.toolkit.fx.FxPlatform;
 import java.util.function.Supplier;
 import javafx.scene.Scene;
+import javafx.scene.control.TreeCell;
 import javafx.scene.control.TreeItem;
 import javafx.scene.control.TreeView;
 import javafx.scene.control.skin.VirtualFlow;
@@ -52,6 +53,29 @@ class TreeViewUtilsTest {
         private Pair(A first, B second) {
             this.first = first;
             this.second = second;
+        }
+    }
+
+    /**
+     * A plain, non-observable holder — mutating {@link #setText} does not fire any change event, the same way
+     * a domain object's field can mutate without the cell showing it finding out on its own. Used by the
+     * {@code updateCell}/{@code updateCells} tests, which are specifically about forcing a redraw of such
+     * silently-mutated data.
+     */
+    private static final class MutableItem {
+
+        private String text;
+
+        private MutableItem(String text) {
+            this.text = text;
+        }
+
+        private String getText() {
+            return text;
+        }
+
+        private void setText(String text) {
+            this.text = text;
         }
     }
 
@@ -112,6 +136,51 @@ class TreeViewUtilsTest {
 
     private static int lastVisibleIndex(TreeView<?> treeView) {
         return flowOf(treeView).getLastVisibleCell().getIndex();
+    }
+
+    /**
+     * Builds a flat {@code TreeView} of {@link MutableItem}s the same way {@link #newTreeView} does for plain
+     * strings — see there for details. Used by the {@code updateCell}/{@code updateCells} tests, which need
+     * an item whose displayed value can mutate without the tree's structure itself changing.
+     */
+    private static TreeView<MutableItem> newMutableTreeView(int itemCount, double width, double height) {
+        var root = new TreeItem<MutableItem>(new MutableItem("root"));
+        for (int i = 0; i < itemCount; i++) {
+            root.getChildren().add(new TreeItem<>(new MutableItem("item-" + i)));
+        }
+        root.setExpanded(true);
+        var treeView = new TreeView<>(root);
+        treeView.setShowRoot(false);
+        treeView.setCellFactory(tv -> new TreeCell<MutableItem>() {
+            @Override
+            protected void updateItem(MutableItem item, boolean empty) {
+                super.updateItem(item, empty);
+                setText(empty || item == null ? null : item.getText());
+            }
+        });
+        stage.setScene(new Scene(treeView, width, height));
+        if (!stage.isShowing()) {
+            stage.show();
+        }
+        treeView.applyCss();
+        treeView.layout();
+        return treeView;
+    }
+
+    /**
+     * Returns the currently rendered text of the cell showing {@code index}, or {@code null} if that index
+     * isn't currently realized.
+     */
+    private static String cellText(TreeView<?> treeView, int index) {
+        for (var node : treeView.lookupAll(".tree-cell")) {
+            if (node instanceof TreeCell<?>) {
+                var cell = (TreeCell<?>) node;
+                if (!cell.isEmpty() && cell.getIndex() == index) {
+                    return cell.getText();
+                }
+            }
+        }
+        return null;
     }
 
     /**
@@ -238,5 +307,60 @@ class TreeViewUtilsTest {
         });
 
         assertThat(visible).isTrue();
+    }
+
+    // updateCell
+
+    @Test
+    void updateCell_itemMutatedInPlace_cellTextReflectsNewValue() throws InterruptedException {
+        var result = onFxThread(() -> {
+            var treeView = newMutableTreeView(50, 200, 300);
+            treeView.getRoot().getChildren().get(5).getValue().setText("changed");
+            var stillStale = cellText(treeView, 5);
+            TreeViewUtils.updateCell(treeView, 5);
+            return new Pair<>(stillStale, cellText(treeView, 5));
+        });
+
+        assertThat(result.first).isEqualTo("item-5");
+        assertThat(result.second).isEqualTo("changed");
+    }
+
+    @Test
+    void updateCell_indexOutOfRange_doesNotThrow() throws InterruptedException {
+        onFxThread(() -> {
+            var treeView = newMutableTreeView(50, 200, 300);
+            TreeViewUtils.updateCell(treeView, 999);
+            return null;
+        });
+    }
+
+    // updateCells
+
+    @Test
+    void updateCells_onlyVisibleTrue_leavesCellsBeyondViewportStale() throws InterruptedException {
+        var result = onFxThread(() -> {
+            var treeView = newMutableTreeView(50, 200, 300);
+            treeView.getRoot().getChildren().get(0).getValue().setText("changed-visible");
+            treeView.getRoot().getChildren().get(49).getValue().setText("changed-far");
+            TreeViewUtils.updateCells(treeView, true);
+            return new Pair<>(cellText(treeView, 0), cellText(treeView, 49));
+        });
+
+        assertThat(result.first).isEqualTo("changed-visible");
+        // Cell 49 isn't realized at all in a fresh, unscrolled view, so there is nothing to even read; the
+        // point is only that updateCells(true) doesn't force it into existence the way false does below.
+        assertThat(result.second).isNull();
+    }
+
+    @Test
+    void updateCells_onlyVisibleFalse_realizesAndUpdatesCellNeverScrolledTo() throws InterruptedException {
+        var text = onFxThread(() -> {
+            var treeView = newMutableTreeView(50, 200, 300);
+            treeView.getRoot().getChildren().get(49).getValue().setText("changed-far");
+            TreeViewUtils.updateCells(treeView, false);
+            return cellText(treeView, 49);
+        });
+
+        assertThat(text).isEqualTo("changed-far");
     }
 }

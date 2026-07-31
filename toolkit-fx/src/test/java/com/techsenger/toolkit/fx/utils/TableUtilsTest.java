@@ -22,9 +22,11 @@ import javafx.beans.property.ReadOnlyStringWrapper;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.scene.Scene;
+import javafx.scene.control.TableCell;
 import javafx.scene.control.TableColumn;
 import javafx.scene.control.TableView;
 import javafx.scene.control.TreeItem;
+import javafx.scene.control.TreeTableCell;
 import javafx.scene.control.TreeTableColumn;
 import javafx.scene.control.TreeTableView;
 import javafx.scene.control.skin.VirtualFlow;
@@ -57,6 +59,29 @@ class TableUtilsTest {
         private Pair(A first, B second) {
             this.first = first;
             this.second = second;
+        }
+    }
+
+    /**
+     * A plain, non-observable holder — mutating {@link #setText} does not fire any change event, the same way
+     * a domain object's field can mutate without the row/cell showing it finding out on its own. Used by the
+     * {@code updateRow}/{@code updateRows} tests, which are specifically about forcing a redraw of such
+     * silently-mutated data.
+     */
+    private static final class MutableItem {
+
+        private String text;
+
+        private MutableItem(String text) {
+            this.text = text;
+        }
+
+        private String getText() {
+            return text;
+        }
+
+        private void setText(String text) {
+            this.text = text;
         }
     }
 
@@ -127,6 +152,84 @@ class TableUtilsTest {
             items.add(prefix + i);
         }
         return items;
+    }
+
+    /**
+     * Builds a single-column {@code TableView} of {@link MutableItem}s the same way {@link #newTableView}
+     * does for plain strings — see there for details. Used by the {@code updateRow}/{@code updateRows} tests,
+     * which need an item whose displayed value can mutate without the items list itself changing.
+     */
+    private static TableView<MutableItem> newMutableTableView(int itemCount, double width, double height) {
+        var items = FXCollections.<MutableItem>observableArrayList();
+        for (int i = 0; i < itemCount; i++) {
+            items.add(new MutableItem("item-" + i));
+        }
+        var tableView = new TableView<>(items);
+        var column = new TableColumn<MutableItem, String>("value");
+        column.setCellValueFactory(data -> new ReadOnlyStringWrapper(data.getValue().getText()));
+        tableView.getColumns().add(column);
+        stage.setScene(new Scene(tableView, width, height));
+        if (!stage.isShowing()) {
+            stage.show();
+        }
+        tableView.applyCss();
+        tableView.layout();
+        return tableView;
+    }
+
+    /**
+     * Builds a flat {@code TreeTableView} of {@link MutableItem}s the same way {@link #newMutableTableView}
+     * builds a {@code TableView} — see there for details.
+     */
+    private static TreeTableView<MutableItem> newMutableTreeTableView(int itemCount, double width, double height) {
+        var root = new TreeItem<MutableItem>(new MutableItem("root"));
+        for (int i = 0; i < itemCount; i++) {
+            root.getChildren().add(new TreeItem<>(new MutableItem("item-" + i)));
+        }
+        root.setExpanded(true);
+        var treeTableView = new TreeTableView<>(root);
+        treeTableView.setShowRoot(false);
+        var column = new TreeTableColumn<MutableItem, String>("value");
+        column.setCellValueFactory(data -> new ReadOnlyStringWrapper(data.getValue().getValue().getText()));
+        treeTableView.getColumns().add(column);
+        stage.setScene(new Scene(treeTableView, width, height));
+        if (!stage.isShowing()) {
+            stage.show();
+        }
+        treeTableView.applyCss();
+        treeTableView.layout();
+        return treeTableView;
+    }
+
+    /**
+     * Returns the currently rendered text of the (only) column's cell in the row showing {@code rowIndex}, or
+     * {@code null} if that row isn't currently realized.
+     */
+    private static String cellText(TableView<?> tableView, int rowIndex) {
+        for (var node : tableView.lookupAll(".table-cell")) {
+            if (node instanceof TableCell<?, ?>) {
+                var cell = (TableCell<?, ?>) node;
+                if (cell.getTableRow() != null && cell.getTableRow().getIndex() == rowIndex) {
+                    return cell.getText();
+                }
+            }
+        }
+        return null;
+    }
+
+    /**
+     * The {@code TreeTableView} counterpart of {@link #cellText(TableView, int)}.
+     */
+    private static String cellText(TreeTableView<?> treeTableView, int rowIndex) {
+        for (var node : treeTableView.lookupAll(".tree-table-cell")) {
+            if (node instanceof TreeTableCell<?, ?>) {
+                var cell = (TreeTableCell<?, ?>) node;
+                if (cell.getTreeTableRow() != null && cell.getTreeTableRow().getIndex() == rowIndex) {
+                    return cell.getText();
+                }
+            }
+        }
+        return null;
     }
 
     private static TreeItem<String> newRoot(int itemCount, String prefix) {
@@ -366,5 +469,113 @@ class TableUtilsTest {
         });
 
         assertThat(visible).isTrue();
+    }
+
+    // TableView: updateRow
+
+    @Test
+    void updateRow_tableView_itemMutatedInPlace_cellTextReflectsNewValue() throws InterruptedException {
+        var result = onFxThread(() -> {
+            var tableView = newMutableTableView(50, 200, 300);
+            tableView.getItems().get(5).setText("changed");
+            var stillStale = cellText(tableView, 5);
+            TableUtils.updateRow(tableView, 5);
+            return new Pair<>(stillStale, cellText(tableView, 5));
+        });
+
+        assertThat(result.first).isEqualTo("item-5");
+        assertThat(result.second).isEqualTo("changed");
+    }
+
+    @Test
+    void updateRow_tableView_indexOutOfRange_doesNotThrow() throws InterruptedException {
+        onFxThread(() -> {
+            var tableView = newMutableTableView(50, 200, 300);
+            TableUtils.updateRow(tableView, 999);
+            return null;
+        });
+    }
+
+    // TableView: updateRows
+
+    @Test
+    void updateRows_tableViewOnlyVisibleTrue_leavesRowsBeyondViewportStale() throws InterruptedException {
+        var result = onFxThread(() -> {
+            var tableView = newMutableTableView(50, 200, 300);
+            tableView.getItems().get(0).setText("changed-visible");
+            tableView.getItems().get(49).setText("changed-far");
+            TableUtils.updateRows(tableView, true);
+            return new Pair<>(cellText(tableView, 0), cellText(tableView, 49));
+        });
+
+        assertThat(result.first).isEqualTo("changed-visible");
+        // Row 49 isn't realized at all in a fresh, unscrolled view, so there is nothing to even read; the
+        // point is only that updateRows(true) doesn't force it into existence the way false does below.
+        assertThat(result.second).isNull();
+    }
+
+    @Test
+    void updateRows_tableViewOnlyVisibleFalse_realizesAndUpdatesRowNeverScrolledTo() throws InterruptedException {
+        var text = onFxThread(() -> {
+            var tableView = newMutableTableView(50, 200, 300);
+            tableView.getItems().get(49).setText("changed-far");
+            TableUtils.updateRows(tableView, false);
+            return cellText(tableView, 49);
+        });
+
+        assertThat(text).isEqualTo("changed-far");
+    }
+
+    // TreeTableView: updateRow
+
+    @Test
+    void updateRow_treeTableView_itemMutatedInPlace_cellTextReflectsNewValue() throws InterruptedException {
+        var result = onFxThread(() -> {
+            var treeTableView = newMutableTreeTableView(50, 200, 300);
+            treeTableView.getRoot().getChildren().get(5).getValue().setText("changed");
+            var stillStale = cellText(treeTableView, 5);
+            TableUtils.updateRow(treeTableView, 5);
+            return new Pair<>(stillStale, cellText(treeTableView, 5));
+        });
+
+        assertThat(result.first).isEqualTo("item-5");
+        assertThat(result.second).isEqualTo("changed");
+    }
+
+    @Test
+    void updateRow_treeTableView_indexOutOfRange_doesNotThrow() throws InterruptedException {
+        onFxThread(() -> {
+            var treeTableView = newMutableTreeTableView(50, 200, 300);
+            TableUtils.updateRow(treeTableView, 999);
+            return null;
+        });
+    }
+
+    // TreeTableView: updateRows
+
+    @Test
+    void updateRows_treeTableViewOnlyVisibleTrue_leavesRowsBeyondViewportStale() throws InterruptedException {
+        var result = onFxThread(() -> {
+            var treeTableView = newMutableTreeTableView(50, 200, 300);
+            treeTableView.getRoot().getChildren().get(0).getValue().setText("changed-visible");
+            treeTableView.getRoot().getChildren().get(49).getValue().setText("changed-far");
+            TableUtils.updateRows(treeTableView, true);
+            return new Pair<>(cellText(treeTableView, 0), cellText(treeTableView, 49));
+        });
+
+        assertThat(result.first).isEqualTo("changed-visible");
+        assertThat(result.second).isNull();
+    }
+
+    @Test
+    void updateRows_treeTableViewOnlyVisibleFalse_realizesAndUpdatesRowNeverScrolledTo() throws InterruptedException {
+        var text = onFxThread(() -> {
+            var treeTableView = newMutableTreeTableView(50, 200, 300);
+            treeTableView.getRoot().getChildren().get(49).getValue().setText("changed-far");
+            TableUtils.updateRows(treeTableView, false);
+            return cellText(treeTableView, 49);
+        });
+
+        assertThat(text).isEqualTo("changed-far");
     }
 }

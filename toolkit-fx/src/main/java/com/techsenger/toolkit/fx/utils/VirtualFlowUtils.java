@@ -23,7 +23,7 @@ import javafx.scene.layout.Region;
 /**
  * Utilities for querying and controlling the scroll position of a {@code VirtualFlow}-backed control
  * ({@code TableView}, {@code ListView}, {@code TreeView}, {@code TreeTableView}, or a custom control whose
- * {@code VirtualFlow} happens to scroll horizontally instead of vertically &mdash; see {@link #visibleRange}).
+ * {@code VirtualFlow} happens to scroll horizontally instead of vertically &mdash; see {@link #getFullyVisibleRange}).
  *
  * <p>Every method here takes the control itself (as a {@link Region}), not the {@code VirtualFlow} directly —
  * the flow is looked up via {@code owner.lookup(".virtual-flow")} internally, and the same {@code owner} is
@@ -34,10 +34,6 @@ import javafx.scene.layout.Region;
  * @author Pavel Castornii
  */
 public final class VirtualFlowUtils {
-
-
-
-    private static final int MAX_CONVERGENCE_ATTEMPTS = 8;
 
     private static final class VisibleRange {
         private final int first;
@@ -52,6 +48,8 @@ public final class VirtualFlowUtils {
             return last - first + 1;
         }
     }
+
+    private static final int MAX_CONVERGENCE_ATTEMPTS = 8;
 
     /**
      * Returns whether {@code index} is currently, fully visible in {@code owner}'s viewport. A row that is
@@ -71,7 +69,7 @@ public final class VirtualFlowUtils {
         if (flow == null) {
             return false;
         }
-        var range = visibleRange(flow);
+        var range = getFullyVisibleRange(flow);
         return range != null && index >= range.first && index <= range.last;
     }
 
@@ -116,7 +114,7 @@ public final class VirtualFlowUtils {
         // flow one cell short of the intended edge.
         var previousTarget = -1;
         for (int attempt = 0; attempt < MAX_CONVERGENCE_ATTEMPTS; attempt++) {
-            var range = visibleRange(flow);
+            var range = getFullyVisibleRange(flow);
             if (range == null) {
                 return;
             }
@@ -160,6 +158,107 @@ public final class VirtualFlowUtils {
         }
     }
 
+    /**
+     * Forces cells of {@code owner}'s virtual flow to re-derive their visual content from their current
+     * item, by toggling each one away from and back to its own index via the standard, public
+     * {@code IndexedCell#updateIndex(int)} hook: a cell's skin reacts to that the same way it does to being
+     * recycled onto a different index (re-fetching the item and calling {@code updateItem} again). Unlike a
+     * structural {@code refresh()} (e.g. {@code TableView#refresh()}), this never touches the flow's
+     * item/offset bookkeeping or the current scroll position/selection, so it works for any
+     * {@code VirtualFlow}-backed control (e.g. {@code TableView}, a custom column-based view), not just ones
+     * whose own cells happen to always re-render on {@code updateIndex} even when the index doesn't actually
+     * change.
+     *
+     * <p>Use this instead of a structural refresh when only cosmetic, per-cell state that a cell's own
+     * {@code updateItem} derives from its item (e.g. a mutable flag on the item itself) may have changed,
+     * not the item list/order itself.
+     *
+     * <p>When {@code onlyVisible} is {@code true}, only cells from {@link VirtualFlow#getFirstVisibleCell()}
+     * to {@link VirtualFlow#getLastVisibleCell()} are touched &mdash; including ones only partially visible
+     * at the viewport's edge (deliberately not {@link #isFullyVisible}'s stricter notion, which this class's
+     * own {@code visibleRange} trims to for scroll-target purposes elsewhere: a partially clipped cell at
+     * the edge is still visible to the user and must still be reached here). This is the cheap, common case,
+     * but a cell the flow keeps recycled/cached at an index that never actually changes while it sits
+     * off-screen won't be reached, and stays stale until something else disturbs it.
+     *
+     * <p>When {@code onlyVisible} is {@code false}, every index from {@code 0} to {@link VirtualFlow#getCellCount()}
+     * is touched via {@link VirtualFlow#getCell(int)}, resolving each one from whatever the flow already has
+     * realized/cached for it (its currently positioned cell, or a recycled one sitting in its pool
+     * off-screen) rather than creating anything new. Note that this is a pass over the flow's own cells, not
+     * necessarily over every item {@code owner} is showing: for a control whose cells are themselves items
+     * one-to-one (e.g. {@code TableView}), the two coincide, but for a control whose cells are each a whole
+     * row/column of several items (e.g. a column-based view), {@code getCellCount()} is the row/column count,
+     * a much smaller number — reaching cells {@code onlyVisible} would miss, at the cost of a full pass over
+     * all of the flow's cells instead of just the visible ones.
+     *
+     * @param owner       the {@code VirtualFlow}-backed control (e.g. {@code TableView}, {@code ListView})
+     * @param onlyVisible whether to touch only the currently visible cells (cheap) or every cell the flow has
+     *                    (thorough)
+     */
+    public static void updateCells(Region owner, boolean onlyVisible) {
+        var flow = lookupFlow(owner);
+        if (flow == null) {
+            return;
+        }
+        int first;
+        int last;
+        if (onlyVisible) {
+            var firstCell = flow.getFirstVisibleCell();
+            var lastCell = flow.getLastVisibleCell();
+            if (firstCell == null || lastCell == null) {
+                return;
+            }
+            first = firstCell.getIndex();
+            last = lastCell.getIndex();
+        } else {
+            first = 0;
+            last = flow.getCellCount() - 1;
+        }
+        for (var index = first; index <= last; index++) {
+            toggleCell(flow, index);
+        }
+        // Without forcing this pass now, a cell whose bounds are clipped at the viewport's edge can have
+        // its content changes above sit un-rendered until some later, unrelated layout pulse - see the
+        // identical reasoning in scrollTo.
+        owner.applyCss();
+        owner.layout();
+    }
+
+    /**
+     * The single-index counterpart of {@link #updateCells(Region, boolean)} &mdash; forces just the one cell
+     * currently realized at {@code index} to re-derive its visual content from its current item, via the
+     * same {@code updateIndex} toggle, without touching any other cell or the flow's item/offset bookkeeping
+     * or scroll position/selection. A no-op if {@code index} isn't currently realized (e.g. scrolled far out
+     * of view) or {@code owner} has no {@code VirtualFlow} yet.
+     *
+     * <p>{@code index} is the flow's own cell index, not necessarily an item index &mdash; for controls whose
+     * cells are themselves items one-to-one (e.g. {@code TableView}, {@code ListView}) the two coincide, but
+     * for a control whose cells are each a whole row/column of several items (e.g. a column-based view) they
+     * do not; such a control needs its own translation layer on top of this method, not a direct call to it
+     * with an item index.
+     *
+     * @param owner the {@code VirtualFlow}-backed control (e.g. {@code TableView}, {@code ListView})
+     * @param index the flow's own cell index to update
+     */
+    public static void updateCell(Region owner, int index) {
+        var flow = lookupFlow(owner);
+        if (flow == null) {
+            return;
+        }
+        toggleCell(flow, index);
+        // See the identical reasoning in updateCells/scrollTo.
+        owner.applyCss();
+        owner.layout();
+    }
+
+    private static void toggleCell(VirtualFlow<?> flow, int index) {
+        var cell = flow.getCell(index);
+        if (cell != null && !cell.isEmpty()) {
+            cell.updateIndex(-1);
+            cell.updateIndex(index);
+        }
+    }
+
     private static void ensureLayout(Region owner, boolean forceLayout) {
         if (forceLayout) {
             owner.applyCss();
@@ -189,7 +288,7 @@ public final class VirtualFlowUtils {
      * cells (e.g. never laid out) or fewer than one cell is fully visible (viewport shorter than a single
      * cell).
      */
-    private static VisibleRange visibleRange(VirtualFlow<?> flow) {
+    private static VisibleRange getFullyVisibleRange(VirtualFlow<?> flow) {
         var firstCell = flow.getFirstVisibleCell();
         var lastCell = flow.getLastVisibleCell();
         if (firstCell == null || lastCell == null) {

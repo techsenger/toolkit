@@ -21,6 +21,7 @@ import java.util.function.Supplier;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.scene.Scene;
+import javafx.scene.control.ListCell;
 import javafx.scene.control.ListView;
 import javafx.scene.control.skin.VirtualFlow;
 import javafx.stage.Stage;
@@ -47,6 +48,29 @@ class ListViewUtilsTest {
         private Pair(A first, B second) {
             this.first = first;
             this.second = second;
+        }
+    }
+
+    /**
+     * A plain, non-observable holder — mutating {@link #setText} does not fire any change event, the same way
+     * a domain object's field can mutate without the cell showing it finding out on its own. Used by the
+     * {@code updateCell}/{@code updateCells} tests, which are specifically about forcing a redraw of such
+     * silently-mutated data.
+     */
+    private static final class MutableItem {
+
+        private String text;
+
+        private MutableItem(String text) {
+            this.text = text;
+        }
+
+        private String getText() {
+            return text;
+        }
+
+        private void setText(String text) {
+            this.text = text;
         }
     }
 
@@ -109,6 +133,49 @@ class ListViewUtilsTest {
             items.add("big-item-" + i);
         }
         return items;
+    }
+
+    /**
+     * Builds a {@code ListView} of {@link MutableItem}s the same way {@link #newListView} does for plain
+     * strings — see there for details. Used by the {@code updateCell}/{@code updateCells} tests, which need
+     * an item whose displayed value can mutate without the items list itself changing.
+     */
+    private static ListView<MutableItem> newMutableListView(int itemCount, double width, double height) {
+        var items = FXCollections.<MutableItem>observableArrayList();
+        for (int i = 0; i < itemCount; i++) {
+            items.add(new MutableItem("item-" + i));
+        }
+        var listView = new ListView<>(items);
+        listView.setCellFactory(lv -> new ListCell<MutableItem>() {
+            @Override
+            protected void updateItem(MutableItem item, boolean empty) {
+                super.updateItem(item, empty);
+                setText(empty || item == null ? null : item.getText());
+            }
+        });
+        stage.setScene(new Scene(listView, width, height));
+        if (!stage.isShowing()) {
+            stage.show();
+        }
+        listView.applyCss();
+        listView.layout();
+        return listView;
+    }
+
+    /**
+     * Returns the currently rendered text of the cell showing {@code index}, or {@code null} if that index
+     * isn't currently realized.
+     */
+    private static String cellText(ListView<?> listView, int index) {
+        for (var node : listView.lookupAll(".list-cell")) {
+            if (node instanceof ListCell<?>) {
+                var cell = (ListCell<?>) node;
+                if (!cell.isEmpty() && cell.getIndex() == index) {
+                    return cell.getText();
+                }
+            }
+        }
+        return null;
     }
 
     /**
@@ -306,5 +373,60 @@ class ListViewUtilsTest {
         });
 
         assertThat(visible).isTrue();
+    }
+
+    // updateCell
+
+    @Test
+    void updateCell_itemMutatedInPlace_cellTextReflectsNewValue() throws InterruptedException {
+        var result = onFxThread(() -> {
+            var listView = newMutableListView(50, 200, 300);
+            listView.getItems().get(5).setText("changed");
+            var stillStale = cellText(listView, 5);
+            ListViewUtils.updateCell(listView, 5);
+            return new Pair<>(stillStale, cellText(listView, 5));
+        });
+
+        assertThat(result.first).isEqualTo("item-5");
+        assertThat(result.second).isEqualTo("changed");
+    }
+
+    @Test
+    void updateCell_indexOutOfRange_doesNotThrow() throws InterruptedException {
+        onFxThread(() -> {
+            var listView = newMutableListView(50, 200, 300);
+            ListViewUtils.updateCell(listView, 999);
+            return null;
+        });
+    }
+
+    // updateCells
+
+    @Test
+    void updateCells_onlyVisibleTrue_leavesCellsBeyondViewportStale() throws InterruptedException {
+        var result = onFxThread(() -> {
+            var listView = newMutableListView(50, 200, 300);
+            listView.getItems().get(0).setText("changed-visible");
+            listView.getItems().get(49).setText("changed-far");
+            ListViewUtils.updateCells(listView, true);
+            return new Pair<>(cellText(listView, 0), cellText(listView, 49));
+        });
+
+        assertThat(result.first).isEqualTo("changed-visible");
+        // Cell 49 isn't realized at all in a fresh, unscrolled view, so there is nothing to even read; the
+        // point is only that updateCells(true) doesn't force it into existence the way false does below.
+        assertThat(result.second).isNull();
+    }
+
+    @Test
+    void updateCells_onlyVisibleFalse_realizesAndUpdatesCellNeverScrolledTo() throws InterruptedException {
+        var text = onFxThread(() -> {
+            var listView = newMutableListView(50, 200, 300);
+            listView.getItems().get(49).setText("changed-far");
+            ListViewUtils.updateCells(listView, false);
+            return cellText(listView, 49);
+        });
+
+        assertThat(text).isEqualTo("changed-far");
     }
 }

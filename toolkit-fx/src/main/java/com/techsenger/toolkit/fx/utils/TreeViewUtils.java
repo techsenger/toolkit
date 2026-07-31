@@ -82,6 +82,32 @@ public final class TreeViewUtils {
         return TreeUtils.findTreeItem(root, value);
     }
 
+    /**
+     * Forces the cell currently showing {@code itemIndex} to re-derive its visual content from its current
+     * item, without touching the tree's items/scroll position/selection — see
+     * {@link VirtualFlowUtils#updateCell}. A tree view's cells are its (visible, expanded) items one-to-one,
+     * so {@code itemIndex} is exactly the cell index.
+     *
+     * @param treeView  the tree view to update
+     * @param itemIndex the item index whose cell should be updated
+     */
+    public static void updateCell(TreeView<?> treeView, int itemIndex) {
+        VirtualFlowUtils.updateCell(treeView, itemIndex);
+    }
+
+    /**
+     * Forces every cell of the tree view to re-derive its visual content from its current item, without
+     * touching the tree's items/scroll position/selection — see {@link VirtualFlowUtils#updateCells}. A tree
+     * view's cells are its (visible, expanded) items one-to-one, so passing {@code false} touches every one
+     * of those.
+     *
+     * @param treeView    the tree view to update
+     * @param onlyVisible whether to touch only the currently visible cells (cheap) or every cell (thorough)
+     */
+    public static void updateCells(TreeView<?> treeView, boolean onlyVisible) {
+        VirtualFlowUtils.updateCells(treeView, onlyVisible);
+    }
+
     private TreeViewUtils() {
         // empty
     }

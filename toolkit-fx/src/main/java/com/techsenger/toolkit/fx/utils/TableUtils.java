@@ -118,6 +118,56 @@ public final class TableUtils {
         return TreeUtils.findTreeItem(root, value);
     }
 
+    /**
+     * Forces the row currently showing {@code itemIndex} to re-derive its visual content from its current
+     * item, without touching the table's items/scroll position/selection — see
+     * {@link VirtualFlowUtils#updateCell}. A table view's rows are its items one-to-one, so {@code itemIndex}
+     * is exactly the row index.
+     *
+     * @param tableView the table view to update
+     * @param itemIndex the item index whose row should be updated
+     */
+    public static void updateRow(TableView<?> tableView, int itemIndex) {
+        VirtualFlowUtils.updateCell(tableView, itemIndex);
+    }
+
+    /**
+     * Forces the tree table row currently showing {@code itemIndex} to re-derive its visual content from its
+     * current item, without touching the tree table's items/scroll position/selection — see
+     * {@link VirtualFlowUtils#updateCell}. A tree table view's rows are its (visible, expanded) items
+     * one-to-one, so {@code itemIndex} is exactly the row index.
+     *
+     * @param treeTableView the tree table view to update
+     * @param itemIndex     the item index whose row should be updated
+     */
+    public static void updateRow(TreeTableView<?> treeTableView, int itemIndex) {
+        VirtualFlowUtils.updateCell(treeTableView, itemIndex);
+    }
+
+    /**
+     * Forces every row of the table view to re-derive its visual content from its current item, without
+     * touching the table's items/scroll position/selection — see {@link VirtualFlowUtils#updateCells}. A
+     * table view's rows are its items one-to-one, so passing {@code false} touches every item.
+     *
+     * @param tableView   the table view to update
+     * @param onlyVisible whether to touch only the currently visible rows (cheap) or every row (thorough)
+     */
+    public static void updateRows(TableView<?> tableView, boolean onlyVisible) {
+        VirtualFlowUtils.updateCells(tableView, onlyVisible);
+    }
+
+    /**
+     * Forces every row of the tree table view to re-derive its visual content from its current item, without
+     * touching the tree table's items/scroll position/selection — see {@link VirtualFlowUtils#updateCells}.
+     * A tree table view's rows are its (visible, expanded) items one-to-one, so this touches every item.
+     *
+     * @param treeTableView the tree table view to update
+     * @param onlyVisible   whether to touch only the currently visible rows (cheap) or every row (thorough)
+     */
+    public static void updateRows(TreeTableView<?> treeTableView, boolean onlyVisible) {
+        VirtualFlowUtils.updateCells(treeTableView, onlyVisible);
+    }
+
     private TableUtils() {
         // empty
     }
