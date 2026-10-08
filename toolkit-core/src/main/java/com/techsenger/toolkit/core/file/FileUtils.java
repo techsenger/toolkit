@@ -18,8 +18,8 @@ package com.techsenger.toolkit.core.file;
 
 import java.io.BufferedWriter;
 import java.io.File;
-import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.OutputStream;
 import java.io.OutputStreamWriter;
 import java.io.Writer;
 import java.nio.charset.Charset;
@@ -52,10 +52,12 @@ public final class FileUtils {
      * @param path of the file
      * @param text that will be written.
      * @param encoding of the file.
+     * @throws IOException exception.
      */
     public static void writeFile(final Path path, final String text, final Charset encoding) throws IOException {
-        try (FileOutputStream fileOutputStream = new FileOutputStream(path.toFile());
-            OutputStreamWriter streamWriter = new OutputStreamWriter(fileOutputStream, encoding);
+        // Files.newOutputStream (not path.toFile()) so that any file system provider is supported
+        try (OutputStream outputStream = Files.newOutputStream(path);
+            OutputStreamWriter streamWriter = new OutputStreamWriter(outputStream, encoding);
             Writer writer = new BufferedWriter(streamWriter)) {
             writer.write(text);
             writer.flush();
