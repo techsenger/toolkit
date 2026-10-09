@@ -61,11 +61,27 @@ public final class ColorUtils {
         return String.format("#%06X", color);
     }
 
-    public static int toInt(Color color) {
+    public static int toRgb(Color color) {
         int rgb = ((int) (color.getRed() * 255) << 16)
                 | ((int) (color.getGreen() * 255) << 8)
                 | (int) (color.getBlue() * 255);
         return rgb;
+    }
+
+    /**
+     * Adds the alpha channel to a color without it. Note that zero alpha gives a color that the methods of this class
+     * treat as the one without alpha, that is, as opaque.
+     *
+     * @param alpha alpha value from 0 to 255
+     * @param color color value in the format 0xRRGGBB, its alpha channel (if any) is ignored
+     * @return color value in the format 0xAARRGGBB
+     * @throws IllegalArgumentException if alpha is out of the range from 0 to 255
+     */
+    public static int toArgb(int alpha, int color) {
+        if (alpha < 0 || alpha > 255) {
+            throw new IllegalArgumentException("Alpha must be in the range from 0 to 255: " + alpha);
+        }
+        return (alpha << 24) | (color & 0xFFFFFF);
     }
 
     /**
