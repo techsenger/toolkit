@@ -119,6 +119,17 @@ public final class ColorUtils {
     }
 
     /**
+     * Converts an integer color value to a CSS color in the {@code rgba(r,g,b,a)} form.
+     *
+     * @param color color value in the format 0xRRGGBB or 0xAARRGGBB
+     * @return the CSS color, with the alpha from 0.0 to 1.0
+     */
+    public static String toCssRgba(int color) {
+        return "rgba(" + ((color >> 16) & 0xFF) + "," + ((color >> 8) & 0xFF) + "," + (color & 0xFF) + ","
+                + getAlphaAsDouble(color) + ")";
+    }
+
+    /**
      * Converts an integer color value in the format 0xRRGGBB or 0xRRGGBBAA to a JavaFX Color.
      *
      * @param colorValue color value in the format 0xRRGGBB or 0xRRGGBBAA
